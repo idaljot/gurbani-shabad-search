@@ -1,0 +1,14 @@
+{
+  "name": "gurbani-shabad-search",
+  "type": "module",
+  "version": "1.0.0",
+  "scripts": {
+    "dev": "astro dev",
+    "build": "astro build",
+    "preview": "astro preview",
+    "fetch-data": "node scripts/fetch-shabads.mjs"
+  },
+  "dependencies": {
+    "astro": "^5.2.0"
+  }
+}

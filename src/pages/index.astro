@@ -1,0 +1,188 @@
+---
+import Layout from '../layouts/Layout.astro';
+import shabads from '../data/shabads.json';
+
+const raags = [...new Set(shabads.map((s) => s.raag))].sort();
+const writers = [...new Set(shabads.map((s) => s.writer))].sort();
+const taals = [...new Set(shabads.map((s) => s.taal).filter(Boolean))].sort();
+---
+<Layout title="Gurbani Shabad Search">
+  <h1>Gurbani Shabad Search</h1>
+  <p class="subtitle">
+    {shabads.length} shabads &middot; search by text, or filter by Raag, Writer, and Taal.
+  </p>
+
+  <div id="controls">
+    <input
+      id="search-box"
+      type="text"
+      placeholder="Search Gurmukhi or English translation..."
+    />
+    <div id="filters">
+      <select id="filter-raag">
+        <option value="">All Raags</option>
+        {raags.map((r) => <option value={r}>{r}</option>)}
+      </select>
+      <select id="filter-writer">
+        <option value="">All Writers</option>
+        {writers.map((w) => <option value={w}>{w}</option>)}
+      </select>
+      <select id="filter-taal">
+        <option value="">All Taals</option>
+        {taals.map((t) => <option value={t}>{t}</option>)}
+      </select>
+      <button id="clear-filters" type="button">Clear</button>
+    </div>
+  </div>
+
+  <p id="result-count"></p>
+  <ul id="results"></ul>
+
+  <script type="application/json" id="shabad-data" set:html={JSON.stringify(shabads)} />
+
+  <script>
+    const shabads = JSON.parse(document.getElementById('shabad-data').textContent);
+
+    const searchBox = document.getElementById('search-box');
+    const filterRaag = document.getElementById('filter-raag');
+    const filterWriter = document.getElementById('filter-writer');
+    const filterTaal = document.getElementById('filter-taal');
+    const clearBtn = document.getElementById('clear-filters');
+    const resultsEl = document.getElementById('results');
+    const countEl = document.getElementById('result-count');
+
+    function normalize(str) {
+      return (str || '').toLowerCase();
+    }
+
+    function render() {
+      const q = normalize(searchBox.value);
+      const raag = filterRaag.value;
+      const writer = filterWriter.value;
+      const taal = filterTaal.value;
+
+      const matches = shabads.filter((s) => {
+        if (raag && s.raag !== raag) return false;
+        if (writer && s.writer !== writer) return false;
+        if (taal && s.taal !== taal) return false;
+        if (q) {
+          const haystack = normalize(s.firstLine) + ' ' + normalize(s.translationEn);
+          if (!haystack.includes(q)) return false;
+        }
+        return true;
+      });
+
+      countEl.textContent = `${matches.length} result${matches.length === 1 ? '' : 's'}`;
+
+      resultsEl.innerHTML = matches
+        .slice(0, 200) // keep the DOM light; refine your search to narrow further
+        .map(
+          (s) => `
+        <li class="result-card">
+          <div class="gurmukhi">${s.firstLine || ''}</div>
+          <div class="translation">${s.translationEn || ''}</div>
+          <div class="meta">
+            <span>Ang ${s.ang}</span>
+            <span>${s.raag}</span>
+            <span>${s.writer}</span>
+            ${s.taal ? `<span>${s.taal}</span>` : ''}
+            <span class="shabad-id">ID: ${s.shabadId}</span>
+          </div>
+        </li>`
+        )
+        .join('');
+    }
+
+    [searchBox, filterRaag, filterWriter, filterTaal].forEach((el) =>
+      el.addEventListener('input', render)
+    );
+
+    clearBtn.addEventListener('click', () => {
+      searchBox.value = '';
+      filterRaag.value = '';
+      filterWriter.value = '';
+      filterTaal.value = '';
+      render();
+    });
+
+    render();
+  </script>
+
+  <style>
+    #controls {
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+      margin-bottom: 1rem;
+    }
+    #search-box {
+      padding: 0.65rem 0.9rem;
+      font-size: 1rem;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: var(--panel);
+    }
+    #filters {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+    }
+    #filters select,
+    #filters button {
+      padding: 0.5rem 0.75rem;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: var(--panel);
+      font-size: 0.95rem;
+    }
+    #filters button {
+      cursor: pointer;
+      color: var(--accent);
+      font-weight: 600;
+    }
+    #result-count {
+      color: var(--muted);
+      font-size: 0.9rem;
+      margin: 0.25rem 0 1rem;
+    }
+    #results {
+      list-style: none;
+      padding: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+    }
+    .result-card {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 1rem 1.1rem;
+    }
+    .gurmukhi {
+      font-size: 1.2rem;
+      margin-bottom: 0.25rem;
+    }
+    .translation {
+      color: var(--muted);
+      margin-bottom: 0.5rem;
+    }
+    .meta {
+      display: flex;
+      gap: 0.75rem;
+      flex-wrap: wrap;
+      font-size: 0.8rem;
+    }
+    .meta span {
+      background: var(--accent-soft);
+      color: var(--accent);
+      padding: 0.15rem 0.5rem;
+      border-radius: 999px;
+    }
+    .meta span.shabad-id {
+      background: transparent;
+      color: var(--muted);
+      font-family: ui-monospace, monospace;
+      padding: 0.15rem 0;
+    }
+  </style>
+</Layout>
