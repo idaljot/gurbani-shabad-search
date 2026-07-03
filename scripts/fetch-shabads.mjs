@@ -113,6 +113,7 @@ async function fetchNotation() {
   const antaraCol = col('antara');
   const taalCol = col('taal');
   const tempoCol = col('tempo');
+  const timestampCol = col('timestamp');
 
   if (idCol === -1) {
     console.warn('\nNotation sheet has no "Shabad ID" column — skipping notation merge.');
@@ -130,9 +131,18 @@ async function fetchNotation() {
       antara: antaraCol !== -1 ? (row[antaraCol] || '') : '',
       taal: taalCol !== -1 ? (row[taalCol] || '').trim() : '',
       tempo: tempoCol !== -1 ? (row[tempoCol] || '').trim() : '',
+      notatedAt: parseTimestamp(timestampCol !== -1 ? row[timestampCol] : null),
     };
   }
   return map;
+}
+
+// Google Forms writes its own locale timestamp format into this column;
+// normalize to ISO so the homepage can sort "recently notated" shabads.
+function parseTimestamp(raw) {
+  if (!raw) return null;
+  const d = new Date(raw);
+  return Number.isNaN(d.getTime()) ? null : d.toISOString();
 }
 
 async function main() {
@@ -159,6 +169,7 @@ async function main() {
             tempo: null,
             sthayi: null,
             antara: null,
+            notatedAt: null,
           });
         }
         // Append every line's text (full shabad, in order).
@@ -196,6 +207,7 @@ async function main() {
           shabad.antara = old.antara;
           shabad.taal = old.taal;
           shabad.tempo = old.tempo;
+          shabad.notatedAt = old.notatedAt || null;
           notationCount++;
         }
       }
@@ -210,6 +222,7 @@ async function main() {
         shabad.antara = n.antara || null;
         shabad.taal = n.taal || null;
         shabad.tempo = n.tempo || null;
+        shabad.notatedAt = n.notatedAt || null;
         notationCount++;
       }
     }

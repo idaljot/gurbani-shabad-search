@@ -20,6 +20,7 @@ const hasNotation = Boolean(shabad.sthayi || shabad.antara || shabad.taal);
       <span>Ang {shabad.ang}</span>
       <span>{shabad.raag}</span>
       <span>{shabad.writer}</span>
+      <span class="shabad-id">ID: {shabad.shabadId}</span>
     </div>
     {hasNotation && (
       <div class="taal-bar">
@@ -69,6 +70,7 @@ const hasNotation = Boolean(shabad.sthayi || shabad.antara || shabad.taal);
     .shabad-header { margin-bottom: 1.25rem; }
     .tags { display: flex; gap: 0.5rem; flex-wrap: wrap; font-size: 0.8rem; margin-bottom: 0.6rem; }
     .tags span { background: var(--accent-soft); color: var(--accent); padding: 0.15rem 0.6rem; border-radius: 999px; }
+    .tags span.shabad-id { background: transparent; border: 1px solid var(--border); color: var(--muted); }
     .taal-bar {
       display: flex; gap: 1.25rem; flex-wrap: wrap; background: #fbf0dd;
       border: 1px solid #e8d4ad; border-radius: 8px; padding: 0.55rem 0.9rem; font-size: 0.95rem;

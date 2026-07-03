@@ -2,21 +2,39 @@
 import Layout from '../layouts/Layout.astro';
 import shabads from '../data/shabads.json';
 
+// Many shabads open with a generic "Raag X Mahalla N ॥" header (or the short
+// "ੴ ਸਤਿਗੁਰ ਪ੍ਰਸਾਦਿ ॥" invocation) that's identical across dozens of shabads
+// in the same raag, so it can't tell two search results apart. Skip those
+// when picking the line to preview.
+function isFillerLine(line) {
+  const t = (line || '').trim();
+  if (!t) return true;
+  if (t.includes('ਮਹਲਾ')) return true;
+  if (t === 'ੴ ਸਤਿਗੁਰ ਪ੍ਰਸਾਦਿ ॥') return true;
+  return false;
+}
+
 const records = shabads.map((s) => ({
   id: s.shabadId,
   ang: s.ang,
   raag: s.raag,
   writer: s.writer,
-  firstLine: s.firstLine,
+  preview: s.textLines.find((l) => !isFillerLine(l)) || s.firstLine || '',
   firstLetters: s.firstLetters,
   hasNotation: Boolean(s.sthayi || s.antara || s.taal),
   taal: s.taal || null,
+  notatedAt: s.notatedAt || null,
 }));
 
 const raags = [...new Set(records.map((s) => s.raag))].sort();
 const writers = [...new Set(records.map((s) => s.writer))].sort();
 const taals = [...new Set(records.map((s) => s.taal).filter(Boolean))].sort();
 const notatedCount = records.filter((s) => s.hasNotation).length;
+
+const recentlyNotated = records
+  .filter((s) => s.hasNotation && s.notatedAt)
+  .sort((a, b) => new Date(b.notatedAt) - new Date(a.notatedAt))
+  .slice(0, 6);
 ---
 <Layout title="Gurbani Shabad Search">
   <h1>Gurbani Shabad Search</h1>
@@ -24,6 +42,32 @@ const notatedCount = records.filter((s) => s.hasNotation).length;
     {records.length} shabads &middot; {notatedCount} with sur &amp; taal &middot; type the
     first letter of each word (like SikhiToTheMax)
   </p>
+
+  <section id="recent-notated">
+    <h2>Recently Notated</h2>
+    {recentlyNotated.length > 0 ? (
+      <ul class="recent-list">
+        {recentlyNotated.map((s) => (
+          <li>
+            <a class="result-card" href={`./shabad/${s.id}/`}>
+              <div class="gurmukhi">{s.preview}</div>
+              <div class="meta">
+                <span>Ang {s.ang}</span>
+                <span>{s.raag}</span>
+                <span>{s.writer}</span>
+                {s.taal && <span class="taal">{s.taal}</span>}
+              </div>
+            </a>
+          </li>
+        ))}
+      </ul>
+    ) : (
+      <p class="recent-empty">
+        No shabads have notation yet — once sur/taal is submitted through the
+        notation form, the newest additions will appear here first.
+      </p>
+    )}
+  </section>
 
   <div id="controls">
     <input
@@ -120,13 +164,14 @@ const notatedCount = records.filter((s) => s.hasNotation).length;
       resultsEl.innerHTML = matches
         .slice(0, 200)
         .map((s) => '<li><a class="result-card" href="./shabad/' + s.id + '/">' +
-          '<div class="gurmukhi">' + (s.firstLine || '') + '</div>' +
+          '<div class="gurmukhi">' + (s.preview || '') + '</div>' +
           '<div class="meta">' +
           '<span>Ang ' + s.ang + '</span>' +
           '<span>' + s.raag + '</span>' +
           '<span>' + s.writer + '</span>' +
           (s.taal ? '<span class="taal">' + s.taal + '</span>' : '') +
           (s.hasNotation ? '<span class="has-sur">sur \u2713</span>' : '') +
+          '<span class="shabad-id">ID: ' + s.id + '</span>' +
           '</div></a></li>')
         .join('');
     }
@@ -173,5 +218,18 @@ const notatedCount = records.filter((s) => s.hasNotation).length;
     .meta { display: flex; gap: 0.5rem; flex-wrap: wrap; font-size: 0.78rem; }
     .meta span { background: var(--accent-soft); color: var(--accent); padding: 0.12rem 0.5rem; border-radius: 999px; }
     .meta span.has-sur { background: #d8ecd8; color: #2e6b2e; }
+    .meta span.shabad-id { background: transparent; border: 1px solid var(--border); color: var(--muted); }
+
+    #recent-notated { margin-bottom: 1.75rem; }
+    #recent-notated h2 {
+      font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.05em;
+      color: var(--muted); font-weight: 600; margin: 0 0 0.6rem;
+    }
+    .recent-list { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 0.6rem; }
+    .recent-empty {
+      color: var(--muted); font-size: 0.9rem; margin: 0;
+      background: var(--panel); border: 1px dashed var(--border);
+      border-radius: 8px; padding: 0.8rem 1rem;
+    }
   </style>
 </Layout>
