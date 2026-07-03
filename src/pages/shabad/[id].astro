@@ -1,0 +1,110 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import shabads from '../../data/shabads.json';
+
+export function getStaticPaths() {
+  return shabads.map((s) => ({
+    params: { id: s.shabadId },
+    props: { shabad: s },
+  }));
+}
+
+const { shabad } = Astro.props;
+const hasNotation = Boolean(shabad.sthayi || shabad.antara || shabad.taal);
+---
+<Layout title={`${shabad.raag} · ${shabad.writer}`}>
+  <p class="back"><a href="../../">&larr; Back to search</a></p>
+
+  <div class="shabad-header">
+    <div class="tags">
+      <span>Ang {shabad.ang}</span>
+      <span>{shabad.raag}</span>
+      <span>{shabad.writer}</span>
+    </div>
+    {hasNotation && (
+      <div class="taal-bar">
+        {shabad.taal && <span><strong>Taal:</strong> {shabad.taal}</span>}
+        {shabad.tempo && <span><strong>Tempo:</strong> {shabad.tempo}</span>}
+      </div>
+    )}
+  </div>
+
+  <div class={hasNotation ? 'panels two' : 'panels one'}>
+    <section class="text-panel">
+      <h2>Shabad</h2>
+      <div class="lines">
+        {shabad.textLines.map((line) => <p class="line">{line}</p>)}
+      </div>
+    </section>
+
+    {hasNotation && (
+      <section class="notation-panel">
+        <h2>Sur / Notation</h2>
+        {shabad.sthayi && (
+          <div class="block">
+            <p class="block-label">Sthayi</p>
+            <pre>{shabad.sthayi}</pre>
+          </div>
+        )}
+        {shabad.antara && (
+          <div class="block">
+            <p class="block-label">Antara</p>
+            <pre>{shabad.antara}</pre>
+          </div>
+        )}
+      </section>
+    )}
+  </div>
+
+  {!hasNotation && (
+    <p class="no-sur">
+      No sur or taal has been added for this shabad yet.
+      Contributions come in through the class form.
+    </p>
+  )}
+
+  <style>
+    .back { margin: 0 0 1rem; }
+    .back a { color: var(--accent); text-decoration: none; font-size: 0.9rem; }
+    .shabad-header { margin-bottom: 1.25rem; }
+    .tags { display: flex; gap: 0.5rem; flex-wrap: wrap; font-size: 0.8rem; margin-bottom: 0.6rem; }
+    .tags span { background: var(--accent-soft); color: var(--accent); padding: 0.15rem 0.6rem; border-radius: 999px; }
+    .taal-bar {
+      display: flex; gap: 1.25rem; flex-wrap: wrap; background: #fbf0dd;
+      border: 1px solid #e8d4ad; border-radius: 8px; padding: 0.55rem 0.9rem; font-size: 0.95rem;
+    }
+    .taal-bar strong { font-weight: 600; }
+
+    .panels { display: grid; gap: 1.25rem; }
+    .panels.two { grid-template-columns: 1fr 1fr; }
+    .panels.one { grid-template-columns: 1fr; }
+    @media (max-width: 700px) {
+      .panels.two { grid-template-columns: 1fr; }
+    }
+
+    section h2 {
+      font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.05em;
+      color: var(--muted); font-weight: 600; margin: 0 0 0.6rem;
+    }
+    .text-panel, .notation-panel {
+      background: var(--panel); border: 1px solid var(--border);
+      border-radius: 10px; padding: 1rem 1.15rem;
+    }
+    .lines { display: flex; flex-direction: column; gap: 0.35rem; }
+    .line { margin: 0; font-size: 1.15rem; line-height: 1.6; }
+
+    .block { margin-bottom: 1rem; }
+    .block:last-child { margin-bottom: 0; }
+    .block-label { margin: 0 0 0.3rem; font-size: 0.9rem; font-weight: 600; color: var(--accent); }
+    pre {
+      margin: 0; font-family: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+      font-size: 0.95rem; line-height: 1.7; white-space: pre; overflow-x: auto;
+      background: var(--bg); padding: 0.6rem 0.75rem; border-radius: 6px;
+    }
+    .no-sur {
+      margin-top: 1.25rem; color: var(--muted); font-size: 0.9rem;
+      background: var(--panel); border: 1px dashed var(--border);
+      border-radius: 8px; padding: 0.8rem 1rem;
+    }
+  </style>
+</Layout>

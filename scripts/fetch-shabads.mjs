@@ -1,40 +1,40 @@
 /**
  * fetch-shabads.mjs
  * ------------------
- * One-time / occasional build script. Walks every Ang (page) of Sri Guru
- * Granth Sahib Ji via the public GurbaniNow API, collects every unique
- * Shabad along with its Raag and Writer, merges in your own Taal mapping
- * (data/taal-mapping.json), and writes the result to src/data/shabads.json.
+ * Build script. Walks every Ang of Sri Guru Granth Sahib Ji via the public
+ * GurbaniNow API, collects every unique Shabad with its full text, Raag,
+ * Writer, and precomputed first-letters (for roman->gurmukhi search), then
+ * merges in Sur/Taal notation from your published Google Sheet.
  *
  * Run it with:  npm run fetch-data
  */
 
 import { writeFile, readFile, mkdir } from 'node:fs/promises';
 import path from 'node:path';
-
+import pkg from 'gurmukhi-utils';
+const { firstLetters, toUnicode } = pkg;
 const API_BASE = 'https://api.gurbaninow.com/v2';
-const TOTAL_ANGS = 1430; // Sri Guru Granth Sahib Ji has 1430 Angs
-const CONCURRENCY = 8; // be a good citizen of a free public API
+const TOTAL_ANGS = 1430;
+const CONCURRENCY = 8;
 const OUT_FILE = path.join('src', 'data', 'shabads.json');
-const TAAL_FILE = path.join('data', 'taal-mapping.json');
+
+// Your published Google Sheet (Form responses), CSV format.
+const SHEET_CSV_URL =
+  'https://docs.google.com/spreadsheets/d/e/2PACX-1vSUXqLcvoPkqgjSZVF5loJYuOHIwuJ_pS8sOZisOWydQCLXTL1kG2r3t4hiTQIpIloGGUAH4b_-srgH/pub?output=csv';
 
 async function fetchAng(pageNum) {
   const res = await fetch(`${API_BASE}/ang/${pageNum}/G`);
-  if (!res.ok) {
-    throw new Error(`Ang ${pageNum} failed: HTTP ${res.status}`);
-  }
+  if (!res.ok) throw new Error(`Ang ${pageNum} failed: HTTP ${res.status}`);
   return res.json();
 }
 
 function extractLines(raw, pageNum) {
   const pageArr = raw?.page;
-
   if (!Array.isArray(pageArr)) {
     console.error(`\nCould not find a page array on Ang ${pageNum}. Raw shape was:`);
     console.error(JSON.stringify(raw, null, 2).slice(0, 2000));
     throw new Error('Unrecognized API response shape — see printed sample above.');
   }
-
   return pageArr
     .map((item) => item.line)
     .filter(Boolean)
@@ -49,16 +49,90 @@ function extractLines(raw, pageNum) {
 }
 
 async function withConcurrency(items, limit, worker) {
-  const results = [];
   let i = 0;
   async function next() {
     while (i < items.length) {
       const idx = i++;
-      results[idx] = await worker(items[idx], idx);
+      await worker(items[idx], idx);
     }
   }
   await Promise.all(Array.from({ length: limit }, next));
-  return results;
+}
+
+/**
+ * Minimal CSV parser that correctly handles quoted fields containing commas
+ * and newlines (notation blocks are multi-line, so this matters).
+ */
+function parseCSV(text) {
+  const rows = [];
+  let row = [];
+  let field = '';
+  let inQuotes = false;
+  for (let i = 0; i < text.length; i++) {
+    const c = text[i];
+    if (inQuotes) {
+      if (c === '"') {
+        if (text[i + 1] === '"') { field += '"'; i++; }
+        else inQuotes = false;
+      } else field += c;
+    } else {
+      if (c === '"') inQuotes = true;
+      else if (c === ',') { row.push(field); field = ''; }
+      else if (c === '\r') { /* ignore */ }
+      else if (c === '\n') { row.push(field); rows.push(row); row = []; field = ''; }
+      else field += c;
+    }
+  }
+  if (field.length > 0 || row.length > 0) { row.push(field); rows.push(row); }
+  return rows;
+}
+
+/**
+ * Fetches the notation sheet and returns a map: shabadId -> {taal, tempo, sthayi, antara}.
+ * Matches columns by header NAME (not position), so reordering form fields won't break it.
+ * If the sheet can't be reached, returns null so the caller can fall back to existing data.
+ */
+async function fetchNotation() {
+  let text;
+  try {
+    const res = await fetch(SHEET_CSV_URL);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    text = await res.text();
+  } catch (err) {
+    console.warn(`\nCould not fetch notation sheet (${err.message}).`);
+    return null;
+  }
+
+  const rows = parseCSV(text);
+  if (rows.length === 0) return {};
+
+  const header = rows[0].map((h) => h.trim().toLowerCase());
+  const col = (name) => header.findIndex((h) => h.includes(name));
+  const idCol = col('shabad id');
+  const sthayiCol = col('sthayi');
+  const antaraCol = col('antara');
+  const taalCol = col('taal');
+  const tempoCol = col('tempo');
+
+  if (idCol === -1) {
+    console.warn('\nNotation sheet has no "Shabad ID" column — skipping notation merge.');
+    return {};
+  }
+
+  const map = {};
+  for (let r = 1; r < rows.length; r++) {
+    const row = rows[r];
+    const id = (row[idCol] || '').trim();
+    if (!id) continue;
+    // Last submission wins if the same shabad is submitted more than once.
+    map[id] = {
+      sthayi: sthayiCol !== -1 ? (row[sthayiCol] || '') : '',
+      antara: antaraCol !== -1 ? (row[antaraCol] || '') : '',
+      taal: taalCol !== -1 ? (row[taalCol] || '').trim() : '',
+      tempo: tempoCol !== -1 ? (row[tempoCol] || '').trim() : '',
+    };
+  }
+  return map;
 }
 
 async function main() {
@@ -80,44 +154,75 @@ async function main() {
             ang: l.ang,
             raag: l.raag,
             writer: l.writer,
-            firstLine: l.gurmukhi,
-            translationEn: l.translationEn,
+            textLines: [],
             taal: null,
+            tempo: null,
+            sthayi: null,
+            antara: null,
           });
         }
+        // Append every line's text (full shabad, in order).
+        shabadMap.get(l.shabadId).textLines.push(l.gurmukhi);
       }
     } catch (err) {
       console.error(`Skipping Ang ${pageNum}: ${err.message}`);
     } finally {
       done++;
-      if (done % 50 === 0) console.log(`  ...${done}/${TOTAL_ANGS} Angs processed`);
+      if (done % 100 === 0) console.log(`  ...${done}/${TOTAL_ANGS} Angs processed`);
     }
   });
 
-  let taalMapping = {};
-  try {
-    const raw = await readFile(TAAL_FILE, 'utf-8');
-    taalMapping = JSON.parse(raw);
-  } catch {
-    console.warn(`No taal mapping found at ${TAAL_FILE} — shabads will have taal: null until you add one.`);
+  // Precompute first-letters for each shabad (concatenated across all its lines).
+  for (const shabad of shabadMap.values()) {
+    shabad.firstLetters = shabad.textLines
+      .map((line) => firstLetters(line))
+      .join(' ');
+    shabad.firstLine = shabad.textLines[0] || '';
   }
 
-  let taalMatches = 0;
-  for (const shabad of shabadMap.values()) {
-    if (taalMapping[shabad.shabadId]) {
-      shabad.taal = taalMapping[shabad.shabadId];
-      taalMatches++;
+  // Merge notation from the Google Sheet, with safe fallback.
+  const notation = await fetchNotation();
+  let notationCount = 0;
+  if (notation === null) {
+    // Sheet unreachable: preserve any notation already in the committed file.
+    console.warn('Falling back to existing notation in src/data/shabads.json (if any).');
+    try {
+      const prev = JSON.parse(await readFile(OUT_FILE, 'utf-8'));
+      const prevMap = new Map(prev.map((s) => [s.shabadId, s]));
+      for (const shabad of shabadMap.values()) {
+        const old = prevMap.get(shabad.shabadId);
+        if (old && (old.sthayi || old.antara || old.taal)) {
+          shabad.sthayi = old.sthayi;
+          shabad.antara = old.antara;
+          shabad.taal = old.taal;
+          shabad.tempo = old.tempo;
+          notationCount++;
+        }
+      }
+    } catch {
+      console.warn('No previous file to fall back to; notation will be empty this run.');
+    }
+  } else {
+    for (const shabad of shabadMap.values()) {
+      const n = notation[shabad.shabadId];
+      if (n && (n.sthayi || n.antara || n.taal)) {
+        shabad.sthayi = n.sthayi || null;
+        shabad.antara = n.antara || null;
+        shabad.taal = n.taal || null;
+        shabad.tempo = n.tempo || null;
+        notationCount++;
+      }
     }
   }
 
   const shabads = Array.from(shabadMap.values()).sort((a, b) => a.ang - b.ang);
 
   await mkdir(path.dirname(OUT_FILE), { recursive: true });
-  await writeFile(OUT_FILE, JSON.stringify(shabads, null, 2), 'utf-8');
+  await writeFile(OUT_FILE, JSON.stringify(shabads), 'utf-8');
 
   console.log(`\nDone. Wrote ${shabads.length} unique shabads to ${OUT_FILE}`);
-  console.log(`${taalMatches} of them have a Taal tag from ${TAAL_FILE}.`);
-  console.log('Commit this file to git so the site builds without depending on the live API.');
+  console.log(`${notationCount} of them have Sur/Taal notation.`);
+  console.log('Commit this file to git so the site builds without depending on live services.');
 }
 
 main().catch((err) => {

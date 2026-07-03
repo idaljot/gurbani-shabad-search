@@ -9,6 +9,7 @@
     "fetch-data": "node scripts/fetch-shabads.mjs"
   },
   "dependencies": {
-    "astro": "^5.2.0"
+    "astro": "^5.2.0",
+    "gurmukhi-utils": "^3.2.2"
   }
 }

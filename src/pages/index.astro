@@ -2,22 +2,39 @@
 import Layout from '../layouts/Layout.astro';
 import shabads from '../data/shabads.json';
 
-const raags = [...new Set(shabads.map((s) => s.raag))].sort();
-const writers = [...new Set(shabads.map((s) => s.writer))].sort();
-const taals = [...new Set(shabads.map((s) => s.taal).filter(Boolean))].sort();
+const records = shabads.map((s) => ({
+  id: s.shabadId,
+  ang: s.ang,
+  raag: s.raag,
+  writer: s.writer,
+  firstLine: s.firstLine,
+  firstLetters: s.firstLetters,
+  hasNotation: Boolean(s.sthayi || s.antara || s.taal),
+  taal: s.taal || null,
+}));
+
+const raags = [...new Set(records.map((s) => s.raag))].sort();
+const writers = [...new Set(records.map((s) => s.writer))].sort();
+const taals = [...new Set(records.map((s) => s.taal).filter(Boolean))].sort();
+const notatedCount = records.filter((s) => s.hasNotation).length;
 ---
 <Layout title="Gurbani Shabad Search">
   <h1>Gurbani Shabad Search</h1>
   <p class="subtitle">
-    {shabads.length} shabads &middot; search by text, or filter by Raag, Writer, and Taal.
+    {records.length} shabads &middot; {notatedCount} with sur &amp; taal &middot; type the
+    first letter of each word (like SikhiToTheMax)
   </p>
 
   <div id="controls">
     <input
       id="search-box"
       type="text"
-      placeholder="Search Gurmukhi or English translation..."
+      autocomplete="off"
+      autocapitalize="off"
+      spellcheck="false"
+      placeholder="Type first letters, e.g. gmsshn"
     />
+    <p id="gurmukhi-preview" aria-live="polite"></p>
     <div id="filters">
       <select id="filter-raag">
         <option value="">All Raags</option>
@@ -31,6 +48,9 @@ const taals = [...new Set(shabads.map((s) => s.taal).filter(Boolean))].sort();
         <option value="">All Taals</option>
         {taals.map((t) => <option value={t}>{t}</option>)}
       </select>
+      <label id="notated-toggle">
+        <input type="checkbox" id="filter-notated" /> Only with sur/taal
+      </label>
       <button id="clear-filters" type="button">Clear</button>
     </div>
   </div>
@@ -38,70 +58,89 @@ const taals = [...new Set(shabads.map((s) => s.taal).filter(Boolean))].sort();
   <p id="result-count"></p>
   <ul id="results"></ul>
 
-  <script type="application/json" id="shabad-data" set:html={JSON.stringify(shabads)} />
+  <script type="application/json" id="shabad-data" set:html={JSON.stringify(records)} />
 
   <script>
-    const shabads = JSON.parse(document.getElementById('shabad-data').textContent);
+    const KEYMAP = {
+      a: '\u0a73', A: '\u0a05', e: '\u0a72', E: '\u0a13', s: '\u0a38', S: '\u0a36\u0a3c', h: '\u0a39',
+      k: '\u0a15', K: '\u0a16', g: '\u0a17', G: '\u0a18',
+      c: '\u0a1a', C: '\u0a1b', j: '\u0a1c', J: '\u0a1d', z: '\u0a1c\u0a3c',
+      t: '\u0a1f', T: '\u0a20', f: '\u0a21', F: '\u0a22', x: '\u0a23',
+      q: '\u0a24', Q: '\u0a25', d: '\u0a26', D: '\u0a27', n: '\u0a28',
+      p: '\u0a2a', P: '\u0a2b', b: '\u0a2c', B: '\u0a2d', m: '\u0a2e',
+      X: '\u0a2f', r: '\u0a30', l: '\u0a32', L: '\u0a32\u0a3c', v: '\u0a35', V: '\u0a5c',
+      Z: '\u0a17\u0a3c', '0': '\u0a66', '1': '\u0a67', '2': '\u0a68', '3': '\u0a69', '4': '\u0a6a',
+      '5': '\u0a6b', '6': '\u0a6c', '7': '\u0a6d', '8': '\u0a6e', '9': '\u0a6f',
+    };
 
+    function romanToGurmukhi(input) {
+      let out = '';
+      for (const ch of input) {
+        if (ch === ' ') { out += ' '; continue; }
+        if (KEYMAP[ch]) out += KEYMAP[ch];
+      }
+      return out;
+    }
+
+    const shabads = JSON.parse(document.getElementById('shabad-data').textContent);
     const searchBox = document.getElementById('search-box');
+    const preview = document.getElementById('gurmukhi-preview');
     const filterRaag = document.getElementById('filter-raag');
     const filterWriter = document.getElementById('filter-writer');
     const filterTaal = document.getElementById('filter-taal');
+    const filterNotated = document.getElementById('filter-notated');
     const clearBtn = document.getElementById('clear-filters');
     const resultsEl = document.getElementById('results');
     const countEl = document.getElementById('result-count');
 
-    function normalize(str) {
-      return (str || '').toLowerCase();
-    }
-
     function render() {
-      const q = normalize(searchBox.value);
+      const raw = searchBox.value.trim();
+      const query = romanToGurmukhi(raw).replace(/\s+/g, '');
+      preview.textContent = raw ? 'Searching: ' + romanToGurmukhi(raw) : '';
+
       const raag = filterRaag.value;
       const writer = filterWriter.value;
       const taal = filterTaal.value;
+      const notatedOnly = filterNotated.checked;
 
       const matches = shabads.filter((s) => {
         if (raag && s.raag !== raag) return false;
         if (writer && s.writer !== writer) return false;
         if (taal && s.taal !== taal) return false;
-        if (q) {
-          const haystack = normalize(s.firstLine) + ' ' + normalize(s.translationEn);
-          if (!haystack.includes(q)) return false;
+        if (notatedOnly && !s.hasNotation) return false;
+        if (query) {
+          const hay = (s.firstLetters || '').replace(/\s+/g, '');
+          if (!hay.includes(query)) return false;
         }
         return true;
       });
 
-      countEl.textContent = `${matches.length} result${matches.length === 1 ? '' : 's'}`;
+      countEl.textContent = matches.length + ' result' + (matches.length === 1 ? '' : 's');
 
       resultsEl.innerHTML = matches
-        .slice(0, 200) // keep the DOM light; refine your search to narrow further
-        .map(
-          (s) => `
-        <li class="result-card">
-          <div class="gurmukhi">${s.firstLine || ''}</div>
-          <div class="translation">${s.translationEn || ''}</div>
-          <div class="meta">
-            <span>Ang ${s.ang}</span>
-            <span>${s.raag}</span>
-            <span>${s.writer}</span>
-            ${s.taal ? `<span>${s.taal}</span>` : ''}
-            <span class="shabad-id">ID: ${s.shabadId}</span>
-          </div>
-        </li>`
-        )
+        .slice(0, 200)
+        .map((s) => '<li><a class="result-card" href="./shabad/' + s.id + '/">' +
+          '<div class="gurmukhi">' + (s.firstLine || '') + '</div>' +
+          '<div class="meta">' +
+          '<span>Ang ' + s.ang + '</span>' +
+          '<span>' + s.raag + '</span>' +
+          '<span>' + s.writer + '</span>' +
+          (s.taal ? '<span class="taal">' + s.taal + '</span>' : '') +
+          (s.hasNotation ? '<span class="has-sur">sur \u2713</span>' : '') +
+          '</div></a></li>')
         .join('');
     }
 
     [searchBox, filterRaag, filterWriter, filterTaal].forEach((el) =>
       el.addEventListener('input', render)
     );
-
+    filterNotated.addEventListener('change', render);
     clearBtn.addEventListener('click', () => {
       searchBox.value = '';
       filterRaag.value = '';
       filterWriter.value = '';
       filterTaal.value = '';
+      filterNotated.checked = false;
       render();
     });
 
@@ -109,80 +148,30 @@ const taals = [...new Set(shabads.map((s) => s.taal).filter(Boolean))].sort();
   </script>
 
   <style>
-    #controls {
-      display: flex;
-      flex-direction: column;
-      gap: 0.75rem;
-      margin-bottom: 1rem;
-    }
+    #controls { display: flex; flex-direction: column; gap: 0.6rem; margin-bottom: 1rem; }
     #search-box {
-      padding: 0.65rem 0.9rem;
-      font-size: 1rem;
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      background: var(--panel);
+      padding: 0.7rem 0.9rem; font-size: 1.05rem; border: 1px solid var(--border);
+      border-radius: 8px; background: var(--panel);
     }
-    #filters {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 0.5rem;
+    #gurmukhi-preview { margin: 0; min-height: 1.2em; font-size: 1rem; color: var(--accent); }
+    #filters { display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center; }
+    #filters select, #filters button {
+      padding: 0.5rem 0.75rem; border: 1px solid var(--border);
+      border-radius: 8px; background: var(--panel); font-size: 0.95rem;
     }
-    #filters select,
-    #filters button {
-      padding: 0.5rem 0.75rem;
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      background: var(--panel);
-      font-size: 0.95rem;
-    }
-    #filters button {
-      cursor: pointer;
-      color: var(--accent);
-      font-weight: 600;
-    }
-    #result-count {
-      color: var(--muted);
-      font-size: 0.9rem;
-      margin: 0.25rem 0 1rem;
-    }
-    #results {
-      list-style: none;
-      padding: 0;
-      display: flex;
-      flex-direction: column;
-      gap: 0.75rem;
-    }
+    #filters button { cursor: pointer; color: var(--accent); font-weight: 600; }
+    #notated-toggle { font-size: 0.9rem; color: var(--muted); display: flex; align-items: center; gap: 0.3rem; }
+    #result-count { color: var(--muted); font-size: 0.9rem; margin: 0.25rem 0 1rem; }
+    #results { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 0.6rem; }
     .result-card {
-      background: var(--panel);
-      border: 1px solid var(--border);
-      border-radius: 10px;
-      padding: 1rem 1.1rem;
+      display: block; background: var(--panel); border: 1px solid var(--border);
+      border-radius: 10px; padding: 0.9rem 1.05rem; text-decoration: none; color: inherit;
+      transition: border-color 0.15s;
     }
-    .gurmukhi {
-      font-size: 1.2rem;
-      margin-bottom: 0.25rem;
-    }
-    .translation {
-      color: var(--muted);
-      margin-bottom: 0.5rem;
-    }
-    .meta {
-      display: flex;
-      gap: 0.75rem;
-      flex-wrap: wrap;
-      font-size: 0.8rem;
-    }
-    .meta span {
-      background: var(--accent-soft);
-      color: var(--accent);
-      padding: 0.15rem 0.5rem;
-      border-radius: 999px;
-    }
-    .meta span.shabad-id {
-      background: transparent;
-      color: var(--muted);
-      font-family: ui-monospace, monospace;
-      padding: 0.15rem 0;
-    }
+    .result-card:hover { border-color: var(--accent); }
+    .gurmukhi { font-size: 1.15rem; margin-bottom: 0.4rem; }
+    .meta { display: flex; gap: 0.5rem; flex-wrap: wrap; font-size: 0.78rem; }
+    .meta span { background: var(--accent-soft); color: var(--accent); padding: 0.12rem 0.5rem; border-radius: 999px; }
+    .meta span.has-sur { background: #d8ecd8; color: #2e6b2e; }
   </style>
 </Layout>
