@@ -58,6 +58,7 @@ const isFloating = variant === 'floating';
     <div class="tabla-visualizer" data-role="visualizer">
       <button type="button" class="tabla-fs-close" data-role="fullscreen-close" aria-label="Exit fullscreen">&times;</button>
       <p class="tabla-taal-name" data-role="fs-taal-name"></p>
+      <p class="tabla-current-beat" data-role="current-beat" aria-label="Current beat">1</p>
       <p class="tabla-beat-count" data-role="beat-count"></p>
       <div class="tabla-beats" data-role="beats"></div>
     </div>
@@ -134,6 +135,12 @@ const isFloating = variant === 'floating';
     display: none;
     margin: 0;
     font-weight: 600;
+  }
+  .tabla-current-beat {
+    margin: 0;
+    font-size: 1.4rem;
+    font-weight: 700;
+    color: var(--ink, #2a2320);
   }
   .tabla-beats {
     display: flex;
@@ -277,6 +284,10 @@ const isFloating = variant === 'floating';
     display: block;
     font-size: 2.2rem;
   }
+  .tabla-visualizer:fullscreen .tabla-current-beat,
+  .tabla-visualizer.tabla-fs-fallback .tabla-current-beat {
+    font-size: 5rem;
+  }
   .tabla-visualizer:fullscreen .tabla-beat-count,
   .tabla-visualizer.tabla-fs-fallback .tabla-beat-count {
     font-size: 1.3rem;
@@ -323,6 +334,7 @@ const isFloating = variant === 'floating';
   let currentBpm = TAALS[DEFAULT_TAAL].defaultTempo;
   let sequence = null;
   let isPlaying = false;
+  let step = 0;
   const synths = {};
   const sampleBuffers = {};
   const instances = [];
@@ -377,13 +389,32 @@ const isFloating = variant === 'floating';
     });
   }
 
+  function updateBeatNumber(index) {
+    instances.forEach((inst) => {
+      if (inst.currentBeatEl) inst.currentBeatEl.textContent = String(index + 1);
+    });
+  }
+
+  function onBeat(index) {
+    highlightBeat(index);
+    updateBeatNumber(index);
+  }
+
+  // Shows the sam (beat 1) as the idle/reset state, both when playback is
+  // stopped and right before a fresh play so every start begins the visible
+  // count at 1 rather than resuming wherever the last cycle left off.
+  function resetBeatDisplay() {
+    highlightBeat(0);
+    updateBeatNumber(0);
+  }
+
   function rebuildSequence() {
     if (sequence) {
       sequence.dispose();
       sequence = null;
     }
     const taal = TAALS[currentTaalName];
-    let step = 0;
+    step = 0;
     sequence = new window.Tone.Sequence(
       (time, bol) => {
         const index = step % taal.beats.length;
@@ -391,7 +422,7 @@ const isFloating = variant === 'floating';
         if (bol !== '-') {
           triggerBol(bol, time);
         }
-        window.Tone.Draw.schedule(() => highlightBeat(index), time);
+        window.Tone.Draw.schedule(() => onBeat(index), time);
       },
       taal.beats,
       '4n',
@@ -419,6 +450,7 @@ const isFloating = variant === 'floating';
         inst.beatCountEl.textContent = `${count} beat${count === 1 ? '' : 's'}`;
       }
     });
+    resetBeatDisplay();
     updateHeaderLabels();
   }
 
@@ -439,7 +471,10 @@ const isFloating = variant === 'floating';
       window.Tone.Transport.stop();
       sequence.stop();
       isPlaying = false;
+      resetBeatDisplay();
     } else {
+      step = 0;
+      resetBeatDisplay();
       sequence.start(0);
       window.Tone.Transport.start();
       isPlaying = true;
@@ -504,6 +539,7 @@ const isFloating = variant === 'floating';
       tempoValue: el.querySelector('[data-role="tempo-value"]'),
       beatsEl: el.querySelector('[data-role="beats"]'),
       beatCountEl: el.querySelector('[data-role="beat-count"]'),
+      currentBeatEl: el.querySelector('[data-role="current-beat"]'),
       visualizerEl: el.querySelector('[data-role="visualizer"]'),
       fullscreenBtn: el.querySelector('[data-role="fullscreen"]'),
       fullscreenCloseBtn: el.querySelector('[data-role="fullscreen-close"]'),
