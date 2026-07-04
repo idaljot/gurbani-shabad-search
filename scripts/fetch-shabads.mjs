@@ -215,11 +215,13 @@ async function main() {
     console.warn(`\n${collisions} cross-source shabad ID collision(s) detected — see warnings above.`);
   }
 
-  // Precompute first-letters for each shabad (concatenated across all its lines).
+  // Precompute per-line first-letters so search results can show the matched
+  // line (not always the first line of the shabad).
   for (const shabad of shabadMap.values()) {
-    shabad.firstLetters = shabad.textLines
-      .map((line) => firstLetters(line))
-      .join(' ');
+    shabad.lines = shabad.textLines.map((line) => ({
+      t: line,
+      fl: firstLetters(line),
+    }));
     shabad.firstLine = shabad.textLines[0] || '';
   }
 

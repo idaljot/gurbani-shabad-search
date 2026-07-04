@@ -21,7 +21,7 @@ const records = shabads.map((s) => ({
   raag: s.raag,
   writer: s.writer,
   preview: s.textLines.find((l) => !isFillerLine(l)) || s.firstLine || '',
-  firstLetters: s.firstLetters,
+  lines: s.lines,
   hasNotation: Boolean(s.sthayi || s.antara || s.taal),
   taal: s.taal || null,
   notatedAt: s.notatedAt || null,
@@ -159,25 +159,33 @@ const recentlyNotated = records
       const taal = filterTaal.value;
       const notatedOnly = filterNotated.checked;
 
-      const matches = shabads.filter((s) => {
-        if (source && s.source !== source) return false;
-        if (raag && s.raag !== raag) return false;
-        if (writer && s.writer !== writer) return false;
-        if (taal && s.taal !== taal) return false;
-        if (notatedOnly && !s.hasNotation) return false;
+      function findMatchedLine(s) {
+        if (!s.lines) return null;
+        return s.lines.find((l) => (l.fl || '').replace(/\s+/g, '').includes(query));
+      }
+
+      const matches = [];
+      for (const s of shabads) {
+        if (source && s.source !== source) continue;
+        if (raag && s.raag !== raag) continue;
+        if (writer && s.writer !== writer) continue;
+        if (taal && s.taal !== taal) continue;
+        if (notatedOnly && !s.hasNotation) continue;
+        let preview = s.preview;
         if (query) {
-          const hay = (s.firstLetters || '').replace(/\s+/g, '');
-          if (!hay.includes(query)) return false;
+          const matchedLine = findMatchedLine(s);
+          if (!matchedLine) continue;
+          preview = matchedLine.t;
         }
-        return true;
-      });
+        matches.push({ s, preview });
+      }
 
       countEl.textContent = matches.length + ' result' + (matches.length === 1 ? '' : 's');
 
       resultsEl.innerHTML = matches
         .slice(0, 200)
-        .map((s) => '<li><a class="result-card" href="./shabad/' + s.id + '/">' +
-          '<div class="gurmukhi">' + (s.preview || '') + '</div>' +
+        .map(({ s, preview }) => '<li><a class="result-card" href="./shabad/' + s.id + '/">' +
+          '<div class="gurmukhi">' + (preview || '') + '</div>' +
           '<div class="meta">' +
           '<span>Ang ' + s.ang + '</span>' +
           '<span>' + s.source + '</span>' +
