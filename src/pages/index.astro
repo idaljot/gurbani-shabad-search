@@ -49,43 +49,22 @@ const recentlyNotated = records
     first letter of each word (like SikhiToTheMax)
   </p>
 
-  <section id="recent-notated">
-    <h2>Recently Notated</h2>
-    {recentlyNotated.length > 0 ? (
-      <ul class="recent-list">
-        {recentlyNotated.map((s) => (
-          <li>
-            <a class="result-card" href={`./shabad/${s.id}/`}>
-              <div class="gurmukhi">{s.preview}</div>
-              <div class="meta">
-                <span>Ang {s.ang}</span>
-                <span>{s.source}</span>
-                <span>{s.raag}</span>
-                <span>{s.writer}</span>
-                {s.taal && <span class="taal">{s.taal}</span>}
-              </div>
-            </a>
-          </li>
-        ))}
-      </ul>
-    ) : (
-      <p class="recent-empty">
-        No shabads have notation yet — once sur/taal is submitted through the
-        notation form, the newest additions will appear here first.
-      </p>
-    )}
-  </section>
-
   <div id="controls">
-    <input
-      id="search-box"
-      type="text"
-      autocomplete="off"
-      autocapitalize="off"
-      spellcheck="false"
-      placeholder="Type first letters, e.g. gmsshn"
-    />
-    <p id="gurmukhi-preview" aria-live="polite"></p>
+    <div id="search-wrap">
+      <input
+        id="search-box"
+        type="text"
+        autocomplete="off"
+        autocapitalize="off"
+        spellcheck="false"
+        placeholder="Type first letters, e.g. gmsshn"
+      />
+      <p id="gurmukhi-preview" aria-live="polite"></p>
+      <div id="results-panel" class="results-panel" hidden>
+        <p id="result-count"></p>
+        <ul id="results"></ul>
+      </div>
+    </div>
     <div id="filters">
       <select id="filter-source">
         <option value="">All Sources</option>
@@ -110,8 +89,34 @@ const recentlyNotated = records
     </div>
   </div>
 
-  <p id="result-count"></p>
-  <ul id="results"></ul>
+  <div id="homepage-sections">
+    <section id="recent-notated">
+      <h2>Recently Notated</h2>
+      {recentlyNotated.length > 0 ? (
+        <ul class="recent-list">
+          {recentlyNotated.map((s) => (
+            <li>
+              <a class="result-card" href={`./shabad/${s.id}/`}>
+                <div class="gurmukhi">{s.preview}</div>
+                <div class="meta">
+                  <span>Ang {s.ang}</span>
+                  <span>{s.source}</span>
+                  <span>{s.raag}</span>
+                  <span>{s.writer}</span>
+                  {s.taal && <span class="taal">{s.taal}</span>}
+                </div>
+              </a>
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <p class="recent-empty">
+          No shabads have notation yet — once sur/taal is submitted through the
+          notation form, the newest additions will appear here first.
+        </p>
+      )}
+    </section>
+  </div>
 
   <TablaPlayer id="floating-tabla" variant="floating" />
 
@@ -150,11 +155,27 @@ const recentlyNotated = records
     const clearBtn = document.getElementById('clear-filters');
     const resultsEl = document.getElementById('results');
     const countEl = document.getElementById('result-count');
+    const resultsPanel = document.getElementById('results-panel');
+    const homepageSections = document.getElementById('homepage-sections');
+
+    // The dropdown activates on either typed text or any filter \u2014 a raag/taal
+    // filter chosen with an empty search box should still browse shabads via
+    // the dropdown, not sit inert until the user also types something.
+    function hasActiveQuery() {
+      return Boolean(searchBox.value.trim()) || Boolean(filterSource.value) ||
+        Boolean(filterRaag.value) || Boolean(filterWriter.value) ||
+        Boolean(filterTaal.value) || filterNotated.checked;
+    }
 
     function render() {
       const raw = searchBox.value.trim();
       const query = romanToGurmukhi(raw).replace(/\s+/g, '');
       preview.textContent = raw ? 'Searching: ' + romanToGurmukhi(raw) : '';
+
+      const active = hasActiveQuery();
+      resultsPanel.hidden = !active;
+      homepageSections.hidden = active;
+      if (!active) return;
 
       const source = filterSource.value;
       const raag = filterRaag.value;
@@ -187,16 +208,13 @@ const recentlyNotated = records
 
       resultsEl.innerHTML = matches
         .slice(0, 200)
-        .map(({ s, preview }) => '<li><a class="result-card" href="./shabad/' + s.id + '/">' +
-          '<div class="gurmukhi">' + (preview || '') + '</div>' +
-          '<div class="meta">' +
-          '<span>Ang ' + s.ang + '</span>' +
-          '<span>' + s.source + '</span>' +
+        .map(({ s, preview }) => '<li><a class="dropdown-item" href="./shabad/' + s.id + '/">' +
+          '<div class="dropdown-line">' + (preview || '') + '</div>' +
+          '<div class="dropdown-tags">' +
           '<span>' + s.raag + '</span>' +
           '<span>' + s.writer + '</span>' +
           (s.taal ? '<span class="taal">' + s.taal + '</span>' : '') +
           (s.hasNotation ? '<span class="has-sur">sur \u2713</span>' : '') +
-          '<span class="shabad-id">ID: ' + s.id + '</span>' +
           '</div></a></li>')
         .join('');
     }
@@ -220,6 +238,7 @@ const recentlyNotated = records
 
   <style>
     #controls { display: flex; flex-direction: column; gap: 0.75rem; margin-bottom: 1.5rem; }
+    #search-wrap { position: relative; }
     #search-box {
       width: 100%; padding: 0.8rem 1rem; font-size: 1.05rem; border: 1px solid var(--border);
       border-radius: 8px; background: var(--panel);
@@ -232,8 +251,32 @@ const recentlyNotated = records
     }
     #filters button { cursor: pointer; color: var(--accent); font-weight: 600; }
     #notated-toggle { font-size: 0.9rem; color: var(--muted); display: flex; align-items: center; gap: 0.3rem; }
-    #result-count { color: var(--muted); font-size: 0.9rem; margin: 0.25rem 0 1.25rem; }
-    #results { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 0.85rem; }
+
+    .results-panel {
+      margin-top: 0.35rem;
+      background: var(--panel); border: 1px solid var(--border); border-radius: 10px;
+      box-shadow: 0 8px 24px rgba(42, 35, 32, 0.15);
+      max-height: 440px; overflow-y: auto; padding: 0.75rem 0.9rem;
+    }
+    #result-count { color: var(--muted); font-size: 0.85rem; margin: 0 0 0.6rem; }
+    #results { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 0.4rem; }
+    /* Rows below are injected via innerHTML at runtime (see render() in the
+       script), so they never receive Astro's scoping attribute — these
+       selectors must be :global() or they silently never match. */
+    :global(.dropdown-item) {
+      display: block; background: var(--bg); border: 1px solid transparent;
+      border-radius: 8px; padding: 0.6rem 0.75rem; text-decoration: none; color: inherit;
+      transition: background 0.1s, border-color 0.1s;
+    }
+    :global(.dropdown-item:hover) { background: var(--accent-soft); border-color: var(--border); }
+    :global(.dropdown-line) {
+      font-family: var(--font-gurmukhi); font-size: 1.05rem; margin-bottom: 0.3rem;
+      overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    }
+    :global(.dropdown-tags) { display: flex; gap: 0.35rem; flex-wrap: wrap; font-size: 0.68rem; }
+    :global(.dropdown-tags span) { background: var(--accent-soft); color: var(--accent); padding: 0.1rem 0.5rem; border-radius: 999px; font-weight: 500; }
+    :global(.dropdown-tags span.has-sur) { background: #d8ecd8; color: #2e6b2e; }
+
     .result-card {
       display: block; background: var(--panel); border: 1px solid var(--border);
       border-radius: 10px; padding: 1.05rem 1.2rem; text-decoration: none; color: inherit;

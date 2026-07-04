@@ -166,7 +166,10 @@ const isFloating = variant === 'floating';
     gap: 0.3rem;
     flex-wrap: wrap;
   }
-  .tabla-beats .bol {
+  /* .bol/.dot are created at runtime via document.createElement (see
+     renderBeats() below), so they never receive Astro's scoping attribute —
+     these rules must be :global() or they silently never match. */
+  :global(.tabla-beats .bol) {
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -174,7 +177,7 @@ const isFloating = variant === 'floating';
     color: var(--muted, #7a7068);
     min-width: 1.6rem;
   }
-  .tabla-beats .dot {
+  :global(.tabla-beats .dot) {
     width: 0.6rem;
     height: 0.6rem;
     border-radius: 50%;
@@ -182,12 +185,12 @@ const isFloating = variant === 'floating';
     margin-bottom: 0.2rem;
     transition: background 0.1s, box-shadow 0.1s, width 0.1s, height 0.1s;
   }
-  .tabla-beats .bol.sam .dot {
+  :global(.tabla-beats .bol.sam .dot) {
     background: var(--accent, #b5651d);
     width: 0.75rem;
     height: 0.75rem;
   }
-  .tabla-beats .bol.active .dot {
+  :global(.tabla-beats .bol.active .dot) {
     background: #2a2320;
     box-shadow: 0 0 0 3px rgba(181, 101, 29, 0.3);
   }
@@ -318,19 +321,19 @@ const isFloating = variant === 'floating';
     gap: 1rem;
     max-width: 90vw;
   }
-  .tabla-visualizer:fullscreen .tabla-beats .bol,
-  .tabla-visualizer.tabla-fs-fallback .tabla-beats .bol {
+  :global(.tabla-visualizer:fullscreen .tabla-beats .bol),
+  :global(.tabla-visualizer.tabla-fs-fallback .tabla-beats .bol) {
     font-size: 1.4rem;
     min-width: 3.5rem;
   }
-  .tabla-visualizer:fullscreen .tabla-beats .dot,
-  .tabla-visualizer.tabla-fs-fallback .tabla-beats .dot {
+  :global(.tabla-visualizer:fullscreen .tabla-beats .dot),
+  :global(.tabla-visualizer.tabla-fs-fallback .tabla-beats .dot) {
     width: 2.5rem;
     height: 2.5rem;
     margin-bottom: 0.6rem;
   }
-  .tabla-visualizer:fullscreen .tabla-beats .bol.sam .dot,
-  .tabla-visualizer.tabla-fs-fallback .tabla-beats .bol.sam .dot {
+  :global(.tabla-visualizer:fullscreen .tabla-beats .bol.sam .dot),
+  :global(.tabla-visualizer.tabla-fs-fallback .tabla-beats .bol.sam .dot) {
     width: 3.1rem;
     height: 3.1rem;
   }

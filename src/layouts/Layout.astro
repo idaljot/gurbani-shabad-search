@@ -29,7 +29,7 @@ const { title = 'Gurbani Kirtan Swar Notation' } = Astro.props;
         --font-gurmukhi: 'Noto Sans Gurmukhi', sans-serif;
         font-family: var(--font-body);
       }
-      * { box-sizing: border-box; }
+      :global(*) { box-sizing: border-box; }
       body {
         margin: 0;
         background: var(--bg);
