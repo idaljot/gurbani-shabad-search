@@ -2,6 +2,7 @@
 import Layout from '../layouts/Layout.astro';
 import TablaPlayer from '../components/TablaPlayer.astro';
 import shabads from '../data/shabads.json';
+import { RAAGS } from '../data/raags.js';
 
 const records = shabads.map((s) => ({
   id: s.shabadId,
@@ -26,6 +27,17 @@ const recentlyNotated = records
   .filter((s) => s.hasNotation && s.notatedAt)
   .sort((a, b) => new Date(b.notatedAt) - new Date(a.notatedAt))
   .slice(0, 3);
+
+// Only real raags (RAAGS keys, curated to exclude structural labels like
+// Vaar/Salok/Svaiyay) that actually have at least one shabad in the data.
+const raagCounts = new Map();
+for (const s of records) {
+  raagCounts.set(s.raag, (raagCounts.get(s.raag) || 0) + 1);
+}
+const browsableRaags = Object.keys(RAAGS)
+  .filter((name) => raagCounts.has(name))
+  .map((name) => ({ name, count: raagCounts.get(name) }))
+  .sort((a, b) => a.name.localeCompare(b.name));
 ---
 <Layout title="Gurbani Kirtan Swar Notation">
   <h1>Gurbani Kirtan Swar Notation</h1>
@@ -106,6 +118,17 @@ const recentlyNotated = records
       {notatedCount > 0 && (
         <a class="view-all-link" href="./notated/">View all notated shabads &rarr;</a>
       )}
+    </section>
+
+    <section id="browse-raag">
+      <h2>Browse by Raag</h2>
+      <div class="raag-chips">
+        {browsableRaags.map((r) => (
+          <a class="raag-chip" href={`./raag/${encodeURIComponent(r.name)}/`}>
+            {r.name} <span class="raag-chip-count">{r.count}</span>
+          </a>
+        ))}
+      </div>
     </section>
   </div>
 
@@ -300,5 +323,24 @@ const recentlyNotated = records
       font-size: 0.9rem; font-weight: 600; text-decoration: none;
     }
     .view-all-link:hover { text-decoration: underline; }
+
+    #browse-raag h2 {
+      font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.05em;
+      color: var(--muted); font-weight: 600; margin: 0 0 0.75rem;
+      font-family: var(--font-body);
+    }
+    .raag-chips { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+    .raag-chip {
+      display: inline-flex; align-items: center; gap: 0.35rem;
+      background: var(--panel); border: 1px solid var(--border);
+      border-radius: 999px; padding: 0.4rem 0.85rem; font-size: 0.85rem;
+      color: var(--ink); text-decoration: none;
+      transition: border-color 0.1s, box-shadow 0.1s;
+    }
+    .raag-chip:hover { border-color: var(--accent); box-shadow: 0 2px 8px rgba(42, 35, 32, 0.08); }
+    .raag-chip-count {
+      background: var(--accent-soft); color: var(--accent); font-weight: 600;
+      font-size: 0.72rem; padding: 0.05rem 0.4rem; border-radius: 999px;
+    }
   </style>
 </Layout>
