@@ -61,6 +61,25 @@ const isFloating = variant === 'floating';
       <p class="tabla-current-beat" data-role="current-beat" aria-label="Current beat">1</p>
       <p class="tabla-beat-count" data-role="beat-count"></p>
       <div class="tabla-beats" data-role="beats"></div>
+      <div class="tabla-fs-controls" data-role="fs-controls">
+        <button type="button" class="tabla-play" data-role="fs-play" aria-label="Play taal">&#9654;</button>
+        <select class="tabla-select" data-role="fs-taal-select" aria-label="Taal">
+          {taalNames.map((name) => (
+            <option value={name} selected={name === selectDefault}>{name}</option>
+          ))}
+        </select>
+        <label class="tabla-tempo">
+          <input
+            type="range"
+            min="40"
+            max="200"
+            step="1"
+            data-role="fs-tempo-range"
+            aria-label="Tempo (BPM)"
+          />
+          <span data-role="fs-tempo-value"></span> BPM
+        </label>
+      </div>
     </div>
   </div>
 </div>
@@ -315,6 +334,29 @@ const isFloating = variant === 'floating';
     width: 3.1rem;
     height: 3.1rem;
   }
+  .tabla-fs-controls {
+    display: none;
+  }
+  .tabla-visualizer:fullscreen .tabla-fs-controls,
+  .tabla-visualizer.tabla-fs-fallback .tabla-fs-controls {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+  .tabla-fs-controls .tabla-play {
+    width: 3.25rem;
+    height: 3.25rem;
+    font-size: 1.2rem;
+  }
+  .tabla-fs-controls .tabla-select {
+    font-size: 1rem;
+    padding: 0.4rem 0.6rem;
+  }
+  .tabla-fs-controls .tabla-tempo {
+    font-size: 1rem;
+  }
 </style>
 
 <script>
@@ -444,6 +486,7 @@ const isFloating = variant === 'floating';
     rebuildSequence();
     instances.forEach((inst) => {
       inst.select.value = name;
+      if (inst.fsTaalSelect) inst.fsTaalSelect.value = name;
       renderBeats(inst.beatsEl, name);
       if (inst.beatCountEl) {
         const count = TAALS[name].beats.length;
@@ -460,6 +503,8 @@ const isFloating = variant === 'floating';
     instances.forEach((inst) => {
       inst.tempoRange.value = String(bpm);
       inst.tempoValue.textContent = String(bpm);
+      if (inst.fsTempoRange) inst.fsTempoRange.value = String(bpm);
+      if (inst.fsTempoValue) inst.fsTempoValue.textContent = String(bpm);
     });
     updateHeaderLabels();
   }
@@ -481,6 +526,7 @@ const isFloating = variant === 'floating';
     }
     instances.forEach((inst) => {
       inst.playBtn.innerHTML = isPlaying ? '&#10074;&#10074;' : '&#9654;';
+      if (inst.fsPlayBtn) inst.fsPlayBtn.innerHTML = isPlaying ? '&#10074;&#10074;' : '&#9654;';
     });
   }
 
@@ -547,6 +593,10 @@ const isFloating = variant === 'floating';
       taalLabel: el.querySelector('[data-role="taal-label"]'),
       tempoLabel: el.querySelector('[data-role="tempo-label"]'),
       fsTaalName: el.querySelector('[data-role="fs-taal-name"]'),
+      fsPlayBtn: el.querySelector('[data-role="fs-play"]'),
+      fsTaalSelect: el.querySelector('[data-role="fs-taal-select"]'),
+      fsTempoRange: el.querySelector('[data-role="fs-tempo-range"]'),
+      fsTempoValue: el.querySelector('[data-role="fs-tempo-value"]'),
     };
     instances.push(inst);
     inst.playBtn.addEventListener('click', togglePlay);
@@ -555,6 +605,9 @@ const isFloating = variant === 'floating';
     inst.fullscreenBtn.addEventListener('click', () => toggleFullscreen(inst));
     inst.fullscreenCloseBtn.addEventListener('click', () => exitFullscreen(inst));
     if (inst.toggleBtn) inst.toggleBtn.addEventListener('click', () => toggleExpanded(inst));
+    if (inst.fsPlayBtn) inst.fsPlayBtn.addEventListener('click', togglePlay);
+    if (inst.fsTaalSelect) inst.fsTaalSelect.addEventListener('change', (e) => setTaal(e.target.value));
+    if (inst.fsTempoRange) inst.fsTempoRange.addEventListener('input', (e) => setTempo(Number(e.target.value)));
   });
 
   const presetEl = document.querySelector('[data-tabla-player][data-preset-taal]');
