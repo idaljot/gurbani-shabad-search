@@ -52,6 +52,9 @@ const isFloating = variant === 'floating';
         />
         <span data-role="tempo-value"></span> BPM
       </label>
+      <label class="tabla-bell-toggle">
+        <input type="checkbox" data-role="bell-toggle" /> Bell on beat 1
+      </label>
       <button type="button" class="tabla-fullscreen-btn" data-role="fullscreen" aria-label="Fullscreen mode">&#9974;</button>
     </div>
 
@@ -78,6 +81,9 @@ const isFloating = variant === 'floating';
             aria-label="Tempo (BPM)"
           />
           <span data-role="fs-tempo-value"></span> BPM
+        </label>
+        <label class="tabla-bell-toggle">
+          <input type="checkbox" data-role="fs-bell-toggle" /> Bell on beat 1
         </label>
       </div>
     </div>
@@ -142,6 +148,14 @@ const isFloating = variant === 'floating';
     align-items: center;
     gap: 0.6rem;
     flex-wrap: wrap;
+  }
+  .tabla-bell-toggle {
+    display: flex;
+    align-items: center;
+    gap: 0.3rem;
+    font-size: 0.8rem;
+    color: var(--muted, #7a7068);
+    white-space: nowrap;
   }
 
   .tabla-beat-count {
@@ -360,6 +374,9 @@ const isFloating = variant === 'floating';
   .tabla-fs-controls .tabla-tempo {
     font-size: 1rem;
   }
+  .tabla-fs-controls .tabla-bell-toggle {
+    font-size: 0.9rem;
+  }
 </style>
 
 <script>
@@ -382,6 +399,8 @@ const isFloating = variant === 'floating';
   let sequence = null;
   let isPlaying = false;
   let step = 0;
+  let bellEnabled = false;
+  let bellBuffer = null;
   const synths = {};
   const sampleBuffers = {};
   const instances = [];
@@ -393,6 +412,17 @@ const isFloating = variant === 'floating';
       .then((buffer) => { sampleBuffers[base] = buffer; })
       .catch(() => {});
   });
+
+  window.Tone.ToneAudioBuffer.load('/tabla/bell.wav')
+    .then((buffer) => { bellBuffer = buffer; })
+    .catch(() => {});
+
+  function triggerBell(time) {
+    if (!bellBuffer) return;
+    const player = new window.Tone.Player(bellBuffer).toDestination();
+    player.onstop = () => player.dispose();
+    player.start(time);
+  }
 
   function getSynth(bol) {
     const base = BOL_ALIASES[bol] || bol.toLowerCase();
@@ -469,6 +499,9 @@ const isFloating = variant === 'floating';
         if (bol !== '-') {
           triggerBol(bol, time);
         }
+        if (index === 0 && bellEnabled) {
+          triggerBell(time);
+        }
         window.Tone.Draw.schedule(() => onBeat(index), time);
       },
       taal.beats,
@@ -512,6 +545,14 @@ const isFloating = variant === 'floating';
       if (inst.fsTempoValue) inst.fsTempoValue.textContent = String(bpm);
     });
     updateHeaderLabels();
+  }
+
+  function setBellEnabled(enabled) {
+    bellEnabled = enabled;
+    instances.forEach((inst) => {
+      if (inst.bellToggle) inst.bellToggle.checked = enabled;
+      if (inst.fsBellToggle) inst.fsBellToggle.checked = enabled;
+    });
   }
 
   async function togglePlay() {
@@ -602,6 +643,8 @@ const isFloating = variant === 'floating';
       fsTaalSelect: el.querySelector('[data-role="fs-taal-select"]'),
       fsTempoRange: el.querySelector('[data-role="fs-tempo-range"]'),
       fsTempoValue: el.querySelector('[data-role="fs-tempo-value"]'),
+      bellToggle: el.querySelector('[data-role="bell-toggle"]'),
+      fsBellToggle: el.querySelector('[data-role="fs-bell-toggle"]'),
     };
     instances.push(inst);
     inst.playBtn.addEventListener('click', togglePlay);
@@ -613,6 +656,8 @@ const isFloating = variant === 'floating';
     if (inst.fsPlayBtn) inst.fsPlayBtn.addEventListener('click', togglePlay);
     if (inst.fsTaalSelect) inst.fsTaalSelect.addEventListener('change', (e) => setTaal(e.target.value));
     if (inst.fsTempoRange) inst.fsTempoRange.addEventListener('input', (e) => setTempo(Number(e.target.value)));
+    if (inst.bellToggle) inst.bellToggle.addEventListener('change', (e) => setBellEnabled(e.target.checked));
+    if (inst.fsBellToggle) inst.fsBellToggle.addEventListener('change', (e) => setBellEnabled(e.target.checked));
   });
 
   const presetEl = document.querySelector('[data-tabla-player][data-preset-taal]');
