@@ -38,8 +38,11 @@ const recentlyNotated = records
   .sort((a, b) => new Date(b.notatedAt) - new Date(a.notatedAt))
   .slice(0, 6);
 ---
-<Layout title="Gurbani Shabad Search">
-  <h1>Gurbani Shabad Search</h1>
+<Layout title="Gurbani Kirtan Swar Notation">
+  <h1>Gurbani Kirtan Swar Notation</h1>
+  <p class="site-credit">
+    Curated by <a href="https://www.youtube.com/@GurmatSangeetTutorials/playlists" target="_blank" rel="noopener">Bhai Jaspal Singh Ji</a>
+  </p>
   <p class="subtitle">
     {records.length} shabads &middot; {notatedCount} with sur &amp; taal &middot; type the
     first letter of each word (like SikhiToTheMax)
@@ -231,6 +234,9 @@ const recentlyNotated = records
     .meta span { background: var(--accent-soft); color: var(--accent); padding: 0.12rem 0.5rem; border-radius: 999px; }
     .meta span.has-sur { background: #d8ecd8; color: #2e6b2e; }
     .meta span.shabad-id { background: transparent; border: 1px solid var(--border); color: var(--muted); }
+
+    .site-credit { color: var(--muted); margin: 0 0 0.5rem; font-size: 0.9rem; }
+    .site-credit a { color: var(--accent); }
 
     #recent-notated { margin-bottom: 1.75rem; }
     #recent-notated h2 {
