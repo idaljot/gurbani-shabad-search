@@ -1,8 +1,8 @@
 # Tabla bol samples
 
-`dha.wav`, `dhin.wav`, `na.wav`, `tin.wav`, `ta.wav`, `ge.wav`, `ke.wav` are
-the 7 bols the player loads. See `CREDITS.md` at the repo root for sourcing
-and licensing.
+`dha.wav`, `dhin.wav`, `na.wav`, `tin.wav`, `ta.wav`, `ge.wav`, `ke.wav`,
+`tun.wav`, `te.wav` are the bols the player loads. See `CREDITS.md` at the
+repo root for sourcing and licensing.
 
 The player checks for these at page load and automatically uses whichever
 ones it finds — any bol without a matching file falls back to a synthesized

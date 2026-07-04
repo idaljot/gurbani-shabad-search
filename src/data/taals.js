@@ -44,14 +44,49 @@ export const TAALS = {
     vibhags: [3, 4, 3, 4],
     defaultTempo: 75,
   },
+  // The 5 taals below were added 2026-07-04, verified against
+  // ragajunglism.org/ragas/talas (same source as the original 6). Gurmat
+  // Sangeet commonly calls the 12-beat taal "Chartaal" — the page lists it
+  // as "Chautal" (its Hindustani/dhrupad name); same theka, kirtan-context
+  // name used here as the key.
+  Chartaal: {
+    beats: ['Dha', 'Dha', 'Dhin', 'Ta', 'KiTa', 'Dha', 'Dhin', 'Ta', 'TiTa', 'KaTa', 'GaDhi', 'GheNa'],
+    vibhags: [4, 4, 2, 2],
+    defaultTempo: 60,
+  },
+  Jhaptaal: {
+    beats: ['Dhin', 'Na', 'Dhin', 'Dhin', 'Na', 'Tin', 'Na', 'Dhin', 'Dhin', 'Na'],
+    vibhags: [2, 3, 2, 3],
+    defaultTempo: 80,
+  },
+  Tilwada: {
+    beats: ['Dha', 'Terekita', 'Dhin', 'Dhin', 'Dha', 'Dha', 'Tin', 'Tin', 'Ta', 'Terekita', 'Dhin', 'Dhin', 'Dha', 'Dha', 'Dhin', 'Dhin'],
+    vibhags: [4, 4, 4, 4],
+    defaultTempo: 70,
+  },
+  Dhamaar: {
+    beats: ['Ka', 'Dhe', 'Ta', 'Dhi', 'Ta', 'Dha', '-', 'Gi', 'Ti', 'Ta', 'Ti', 'Te', 'Ta', '-'],
+    vibhags: [5, 2, 3, 4],
+    defaultTempo: 55,
+  },
+  Sooltaal: {
+    beats: ['Dha', 'Dha', 'Dhin', 'Ta', 'TiTe', 'Dha', 'TiTe', 'KaTa', 'GaDi', 'GeNe'],
+    vibhags: [2, 2, 2, 2, 2],
+    defaultTempo: 50,
+  },
 };
 
 export const DEFAULT_TAAL = 'Teentaal';
 
-// The launch set only ships samples/synth voices for these 7 base bols.
-// Any other syllable appearing in a theka above is approximated to the
-// closest one here for audio playback (the visual beat indicator still
-// shows the authentic syllable). See CREDITS.md for sample sourcing status.
+// The launch set ships real samples for these base bols; any other syllable
+// appearing in a theka above is approximated to the closest one here for
+// audio playback (the visual beat indicator still shows the authentic
+// syllable). See CREDITS.md for sample sourcing status.
+//
+// Tun and Te used to be approximated to tin/ke respectively; real samples
+// for both were added 2026-07-04 (from mmiron's CC0 Freesound pack, see
+// CREDITS.md) once the new taals below made them referenced bols in their
+// own right, not just approximation targets.
 export const BOL_ALIASES = {
   Dha: 'dha',
   Dhin: 'dhin',
@@ -61,13 +96,28 @@ export const BOL_ALIASES = {
   Ta: 'ta',
   Tha: 'ta',
   Ti: 'ke',
-  Tun: 'tin',
-  Te: 'ke',
+  Tun: 'tun',
+  Te: 'te',
   Terekita: 'ke',
   DhaGi: 'dha',
   TeTe: 'ke',
   GiTa: 'ke',
   KiTe: 'ke',
+  // Compound/ornamental syllables introduced by Chartaal, Dhamaar, and
+  // Sooltaal — approximated to the closest base bol, same convention as
+  // the Terekita/DhaGi/TeTe/GiTa/KiTe entries above.
+  KiTa: 'ke',
+  TiTa: 'ke',
+  GaDhi: 'ge',
+  GheNa: 'ge',
+  Ka: 'ke',
+  Dhe: 'dha',
+  Dhi: 'ke',
+  Gi: 'ke',
+  TiTe: 'ke',
+  KaTa: 'ke',
+  GaDi: 'ge',
+  GeNe: 'ge',
 };
 
-export const BASE_BOLS = ['dha', 'dhin', 'na', 'tin', 'ta', 'ge', 'ke'];
+export const BASE_BOLS = ['dha', 'dhin', 'na', 'tin', 'ta', 'ge', 'ke', 'tun', 'te'];
