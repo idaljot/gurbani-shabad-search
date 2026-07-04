@@ -1,5 +1,6 @@
 ---
 import Layout from '../../layouts/Layout.astro';
+import TablaPlayer from '../../components/TablaPlayer.astro';
 import shabads from '../../data/shabads.json';
 
 export function getStaticPaths() {
@@ -30,6 +31,10 @@ const hasNotation = Boolean(shabad.sthayi || shabad.antara || shabad.taal);
       </div>
     )}
   </div>
+
+  {shabad.taal && (
+    <TablaPlayer id="shabad-tabla" variant="embedded" presetTaal={shabad.taal} presetTempo={shabad.tempo} />
+  )}
 
   <div class={hasNotation ? 'panels two' : 'panels one'}>
     <section class="text-panel">

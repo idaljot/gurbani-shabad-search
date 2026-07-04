@@ -1,0 +1,254 @@
+---
+import { TAALS, DEFAULT_TAAL } from '../data/taals.js';
+
+const {
+  id,
+  variant = 'bar',
+  presetTaal,
+  presetTempo,
+} = Astro.props;
+
+const taalNames = Object.keys(TAALS);
+const selectDefault = presetTaal && TAALS[presetTaal] ? presetTaal : DEFAULT_TAAL;
+---
+
+<div
+  class={`tabla-player tabla-player--${variant}`}
+  data-tabla-player
+  id={id}
+  data-preset-taal={presetTaal && TAALS[presetTaal] ? presetTaal : undefined}
+  data-preset-tempo={presetTempo || undefined}
+>
+  <button type="button" class="tabla-play" data-role="play" aria-label="Play taal">&#9654;</button>
+
+  <select class="tabla-select" data-role="taal-select" aria-label="Taal">
+    {taalNames.map((name) => (
+      <option value={name} selected={name === selectDefault}>{name}</option>
+    ))}
+  </select>
+
+  <label class="tabla-tempo">
+    <input
+      type="range"
+      min="40"
+      max="200"
+      step="1"
+      data-role="tempo-range"
+      aria-label="Tempo (BPM)"
+    />
+    <span data-role="tempo-value"></span> BPM
+  </label>
+
+  <div class="tabla-beats" data-role="beats"></div>
+</div>
+
+<style>
+  .tabla-player {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+  }
+  .tabla-play {
+    width: 2.1rem;
+    height: 2.1rem;
+    border-radius: 50%;
+    border: 1px solid var(--border, #e5dccb);
+    background: var(--accent, #b5651d);
+    color: #fff;
+    font-size: 0.85rem;
+    cursor: pointer;
+    flex: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .tabla-select {
+    font: inherit;
+    padding: 0.25rem 0.5rem;
+    border-radius: 6px;
+    border: 1px solid var(--border, #e5dccb);
+    background: #fff;
+  }
+  .tabla-tempo {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-size: 0.85rem;
+    color: var(--muted, #7a7068);
+  }
+  .tabla-beats {
+    display: flex;
+    gap: 0.3rem;
+    flex-wrap: wrap;
+  }
+  .tabla-beats .bol {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    font-size: 0.65rem;
+    color: var(--muted, #7a7068);
+    min-width: 1.6rem;
+  }
+  .tabla-beats .dot {
+    width: 0.6rem;
+    height: 0.6rem;
+    border-radius: 50%;
+    background: var(--border, #e5dccb);
+    margin-bottom: 0.2rem;
+  }
+  .tabla-beats .bol.sam .dot {
+    background: var(--accent, #b5651d);
+    width: 0.75rem;
+    height: 0.75rem;
+  }
+  .tabla-beats .bol.active .dot {
+    background: #2a2320;
+    box-shadow: 0 0 0 3px rgba(181, 101, 29, 0.3);
+  }
+
+  .tabla-player--bar {
+    position: sticky;
+    top: 0;
+    z-index: 20;
+    background: #fff;
+    border-bottom: 1px solid var(--border, #e5dccb);
+    padding: 0.5rem 1.25rem;
+  }
+  .tabla-player--embedded {
+    background: var(--panel, #fff);
+    border: 1px solid var(--border, #e5dccb);
+    border-radius: 10px;
+    padding: 0.85rem 1rem;
+    margin-top: 1rem;
+  }
+</style>
+
+<script>
+  import { TAALS, DEFAULT_TAAL, BOL_ALIASES } from '../data/taals.js';
+
+  const PITCHES = {
+    dha: 'A1',
+    dhin: 'C2',
+    na: 'E2',
+    tin: 'G2',
+    ta: 'D2',
+    ge: 'B1',
+    ke: 'F2',
+  };
+
+  let currentTaalName = DEFAULT_TAAL;
+  let sequence = null;
+  let isPlaying = false;
+  const synths = {};
+  const instances = [];
+
+  function getSynth(bol) {
+    const base = BOL_ALIASES[bol] || bol.toLowerCase();
+    if (!synths[base]) {
+      synths[base] = new window.Tone.MembraneSynth({
+        envelope: { attack: 0.001, decay: 0.3, sustain: 0 },
+      }).toDestination();
+    }
+    return { synth: synths[base], base };
+  }
+
+  function renderBeats(beatsEl, taalName) {
+    const taal = TAALS[taalName];
+    beatsEl.innerHTML = '';
+    taal.beats.forEach((bol, i) => {
+      const el = document.createElement('div');
+      el.className = 'bol' + (i === 0 ? ' sam' : '');
+      el.dataset.index = String(i);
+      el.innerHTML = `<span class="dot"></span><span>${bol}</span>`;
+      beatsEl.appendChild(el);
+    });
+  }
+
+  function highlightBeat(index) {
+    instances.forEach((inst) => {
+      inst.beatsEl.querySelectorAll('.bol').forEach((el) => el.classList.remove('active'));
+      const target = inst.beatsEl.querySelector(`[data-index="${index}"]`);
+      if (target) target.classList.add('active');
+    });
+  }
+
+  function rebuildSequence() {
+    if (sequence) {
+      sequence.dispose();
+      sequence = null;
+    }
+    const taal = TAALS[currentTaalName];
+    let step = 0;
+    sequence = new window.Tone.Sequence(
+      (time, bol) => {
+        const index = step % taal.beats.length;
+        step++;
+        if (bol !== '-') {
+          const { synth, base } = getSynth(bol);
+          synth.triggerAttackRelease(PITCHES[base] || 'C2', '8n', time);
+        }
+        window.Tone.Draw.schedule(() => highlightBeat(index), time);
+      },
+      taal.beats,
+      '4n',
+    );
+    if (isPlaying) sequence.start(0);
+  }
+
+  function setTaal(name) {
+    if (!TAALS[name]) return;
+    currentTaalName = name;
+    rebuildSequence();
+    instances.forEach((inst) => {
+      inst.select.value = name;
+      renderBeats(inst.beatsEl, name);
+    });
+  }
+
+  function setTempo(bpm) {
+    window.Tone.Transport.bpm.value = bpm;
+    instances.forEach((inst) => {
+      inst.tempoRange.value = String(bpm);
+      inst.tempoValue.textContent = String(bpm);
+    });
+  }
+
+  async function togglePlay() {
+    await window.Tone.start();
+    if (!sequence) rebuildSequence();
+    if (isPlaying) {
+      window.Tone.Transport.stop();
+      sequence.stop();
+      isPlaying = false;
+    } else {
+      sequence.start(0);
+      window.Tone.Transport.start();
+      isPlaying = true;
+    }
+    instances.forEach((inst) => {
+      inst.playBtn.innerHTML = isPlaying ? '&#10074;&#10074;' : '&#9654;';
+    });
+  }
+
+  document.querySelectorAll('[data-tabla-player]').forEach((el) => {
+    const inst = {
+      el,
+      playBtn: el.querySelector('[data-role="play"]'),
+      select: el.querySelector('[data-role="taal-select"]'),
+      tempoRange: el.querySelector('[data-role="tempo-range"]'),
+      tempoValue: el.querySelector('[data-role="tempo-value"]'),
+      beatsEl: el.querySelector('[data-role="beats"]'),
+    };
+    instances.push(inst);
+    inst.playBtn.addEventListener('click', togglePlay);
+    inst.select.addEventListener('change', (e) => setTaal(e.target.value));
+    inst.tempoRange.addEventListener('input', (e) => setTempo(Number(e.target.value)));
+  });
+
+  const presetEl = document.querySelector('[data-tabla-player][data-preset-taal]');
+  const initTaal = presetEl?.dataset.presetTaal || DEFAULT_TAAL;
+  const initTempo = Number(presetEl?.dataset.presetTempo) || TAALS[initTaal]?.defaultTempo || 90;
+  setTaal(initTaal);
+  setTempo(initTempo);
+</script>
