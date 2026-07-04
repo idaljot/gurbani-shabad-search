@@ -27,6 +27,11 @@ The `Tone.MembraneSynth` synthesized placeholder in
 any bol whose sample file is missing, so the player degrades gracefully
 rather than going silent.
 
+`public/tabla/bell.wav` (the optional "Bell on beat 1" sam sound) is **not**
+from either pack above and has no documented source — see
+`public/tabla/README.md`. Confirm its license before treating it as covered
+by the credits on this page.
+
 ## Available but unused
 
 The rest of `sample-sources/8162__mmiron__tabla-bols/` (mmiron, CC0, same
