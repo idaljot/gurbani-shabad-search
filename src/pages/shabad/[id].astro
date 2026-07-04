@@ -32,9 +32,12 @@ const hasNotation = Boolean(shabad.sthayi || shabad.antara || shabad.taal);
     )}
   </div>
 
-  {shabad.taal && (
-    <TablaPlayer id="shabad-tabla" variant="embedded" presetTaal={shabad.taal} presetTempo={shabad.tempo} />
-  )}
+  <TablaPlayer
+    id="shabad-tabla"
+    variant="embedded"
+    presetTaal={shabad.taal || 'Teentaal'}
+    presetTempo={shabad.tempo || 80}
+  />
 
   <div class={hasNotation ? 'panels two' : 'panels one'}>
     <section class="text-panel">

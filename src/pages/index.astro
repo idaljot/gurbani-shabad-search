@@ -1,5 +1,6 @@
 ---
 import Layout from '../layouts/Layout.astro';
+import TablaPlayer from '../components/TablaPlayer.astro';
 import shabads from '../data/shabads.json';
 
 // Many shabads open with a generic "Raag X Mahalla N ॥" header (or the short
@@ -111,6 +112,8 @@ const recentlyNotated = records
 
   <p id="result-count"></p>
   <ul id="results"></ul>
+
+  <TablaPlayer id="floating-tabla" variant="floating" />
 
   <script type="application/json" id="shabad-data" set:html={JSON.stringify(records)} />
 

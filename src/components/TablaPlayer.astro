@@ -3,13 +3,14 @@ import { TAALS, DEFAULT_TAAL } from '../data/taals.js';
 
 const {
   id,
-  variant = 'bar',
+  variant = 'embedded',
   presetTaal,
   presetTempo,
 } = Astro.props;
 
 const taalNames = Object.keys(TAALS);
 const selectDefault = presetTaal && TAALS[presetTaal] ? presetTaal : DEFAULT_TAAL;
+const isFloating = variant === 'floating';
 ---
 
 <div
@@ -19,35 +20,53 @@ const selectDefault = presetTaal && TAALS[presetTaal] ? presetTaal : DEFAULT_TAA
   data-preset-taal={presetTaal && TAALS[presetTaal] ? presetTaal : undefined}
   data-preset-tempo={presetTempo || undefined}
 >
-  <button type="button" class="tabla-play" data-role="play" aria-label="Play taal">&#9654;</button>
+  {isFloating && (
+    <div class="tabla-header" data-role="header">
+      <button type="button" class="tabla-play tabla-play--small" data-role="play" aria-label="Play taal">&#9654;</button>
+      <div class="tabla-header-info">
+        <span class="tabla-header-taal" data-role="taal-label"></span>
+        <span class="tabla-header-bpm" data-role="tempo-label"></span>
+      </div>
+      <button type="button" class="tabla-chevron" data-role="toggle" aria-label="Expand tabla player" aria-expanded="false">&#9650;</button>
+    </div>
+  )}
 
-  <select class="tabla-select" data-role="taal-select" aria-label="Taal">
-    {taalNames.map((name) => (
-      <option value={name} selected={name === selectDefault}>{name}</option>
-    ))}
-  </select>
+  <div class="tabla-body" data-role="body">
+    <div class="tabla-controls-row">
+      {!isFloating && (
+        <button type="button" class="tabla-play" data-role="play" aria-label="Play taal">&#9654;</button>
+      )}
+      <select class="tabla-select" data-role="taal-select" aria-label="Taal">
+        {taalNames.map((name) => (
+          <option value={name} selected={name === selectDefault}>{name}</option>
+        ))}
+      </select>
+      <label class="tabla-tempo">
+        <input
+          type="range"
+          min="40"
+          max="200"
+          step="1"
+          data-role="tempo-range"
+          aria-label="Tempo (BPM)"
+        />
+        <span data-role="tempo-value"></span> BPM
+      </label>
+      <button type="button" class="tabla-fullscreen-btn" data-role="fullscreen" aria-label="Fullscreen mode">&#9974;</button>
+    </div>
 
-  <label class="tabla-tempo">
-    <input
-      type="range"
-      min="40"
-      max="200"
-      step="1"
-      data-role="tempo-range"
-      aria-label="Tempo (BPM)"
-    />
-    <span data-role="tempo-value"></span> BPM
-  </label>
-
-  <div class="tabla-beats" data-role="beats"></div>
+    <div class="tabla-visualizer" data-role="visualizer">
+      <button type="button" class="tabla-fs-close" data-role="fullscreen-close" aria-label="Exit fullscreen">&times;</button>
+      <p class="tabla-taal-name" data-role="fs-taal-name"></p>
+      <p class="tabla-beat-count" data-role="beat-count"></p>
+      <div class="tabla-beats" data-role="beats"></div>
+    </div>
+  </div>
 </div>
 
 <style>
   .tabla-player {
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-    flex-wrap: wrap;
+    font: inherit;
   }
   .tabla-play {
     width: 2.1rem;
@@ -63,6 +82,11 @@ const selectDefault = presetTaal && TAALS[presetTaal] ? presetTaal : DEFAULT_TAA
     align-items: center;
     justify-content: center;
   }
+  .tabla-play--small {
+    width: 1.9rem;
+    height: 1.9rem;
+    font-size: 0.75rem;
+  }
   .tabla-select {
     font: inherit;
     padding: 0.25rem 0.5rem;
@@ -76,6 +100,40 @@ const selectDefault = presetTaal && TAALS[presetTaal] ? presetTaal : DEFAULT_TAA
     gap: 0.4rem;
     font-size: 0.85rem;
     color: var(--muted, #7a7068);
+  }
+  .tabla-fullscreen-btn {
+    border: 1px solid var(--border, #e5dccb);
+    background: #fff;
+    border-radius: 6px;
+    width: 2rem;
+    height: 2rem;
+    cursor: pointer;
+    font-size: 1rem;
+    flex: none;
+    color: var(--muted, #7a7068);
+  }
+  .tabla-fullscreen-btn:hover {
+    color: var(--accent, #b5651d);
+    border-color: var(--accent, #b5651d);
+  }
+
+  .tabla-controls-row {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    flex-wrap: wrap;
+  }
+
+  .tabla-beat-count {
+    margin: 0.75rem 0 0.4rem;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--accent, #b5651d);
+  }
+  .tabla-taal-name {
+    display: none;
+    margin: 0;
+    font-weight: 600;
   }
   .tabla-beats {
     display: flex;
@@ -96,6 +154,7 @@ const selectDefault = presetTaal && TAALS[presetTaal] ? presetTaal : DEFAULT_TAA
     border-radius: 50%;
     background: var(--border, #e5dccb);
     margin-bottom: 0.2rem;
+    transition: background 0.1s, box-shadow 0.1s, width 0.1s, height 0.1s;
   }
   .tabla-beats .bol.sam .dot {
     background: var(--accent, #b5651d);
@@ -107,20 +166,143 @@ const selectDefault = presetTaal && TAALS[presetTaal] ? presetTaal : DEFAULT_TAA
     box-shadow: 0 0 0 3px rgba(181, 101, 29, 0.3);
   }
 
-  .tabla-player--bar {
-    position: sticky;
-    top: 0;
-    z-index: 20;
-    background: #fff;
-    border-bottom: 1px solid var(--border, #e5dccb);
-    padding: 0.5rem 1.25rem;
-  }
+  /* --- Embedded (shabad detail page): always fully expanded --- */
   .tabla-player--embedded {
     background: var(--panel, #fff);
     border: 1px solid var(--border, #e5dccb);
     border-radius: 10px;
     padding: 0.85rem 1rem;
     margin-top: 1rem;
+  }
+
+  /* --- Floating (homepage widget) --- */
+  .tabla-player--floating {
+    position: fixed;
+    right: 1rem;
+    bottom: 1rem;
+    z-index: 60;
+    background: #fff;
+    border: 1px solid var(--border, #e5dccb);
+    border-radius: 12px;
+    box-shadow: 0 6px 20px rgba(42, 35, 32, 0.18);
+    padding: 0.6rem 0.75rem;
+    width: 200px;
+  }
+  .tabla-player--floating.expanded {
+    width: auto;
+    min-width: 260px;
+    max-width: min(340px, calc(100vw - 2rem));
+  }
+  .tabla-header {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+  .tabla-header-info {
+    display: flex;
+    flex-direction: column;
+    line-height: 1.2;
+    overflow: hidden;
+    flex: 1;
+  }
+  .tabla-header-taal {
+    font-size: 0.85rem;
+    font-weight: 600;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .tabla-header-bpm {
+    font-size: 0.72rem;
+    color: var(--muted, #7a7068);
+  }
+  .tabla-chevron {
+    border: none;
+    background: none;
+    cursor: pointer;
+    color: var(--muted, #7a7068);
+    font-size: 0.75rem;
+    flex: none;
+    padding: 0.2rem;
+  }
+  .tabla-player--floating .tabla-body {
+    display: none;
+    margin-top: 0.65rem;
+    padding-top: 0.65rem;
+    border-top: 1px solid var(--border, #e5dccb);
+  }
+  .tabla-player--floating.expanded .tabla-body {
+    display: block;
+  }
+
+  /* --- Fullscreen visualizer --- */
+  .tabla-fs-close {
+    display: none;
+  }
+  .tabla-visualizer:fullscreen,
+  .tabla-visualizer.tabla-fs-fallback {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 1.5rem;
+    background: var(--bg, #fbf7f0);
+    width: 100vw;
+    height: 100vh;
+  }
+  .tabla-visualizer.tabla-fs-fallback {
+    position: fixed;
+    inset: 0;
+    z-index: 9999;
+  }
+  .tabla-visualizer:fullscreen .tabla-fs-close,
+  .tabla-visualizer.tabla-fs-fallback .tabla-fs-close {
+    display: flex;
+    position: absolute;
+    top: 1.5rem;
+    right: 1.5rem;
+    width: 2.75rem;
+    height: 2.75rem;
+    border-radius: 50%;
+    border: 1px solid var(--border, #e5dccb);
+    background: #fff;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+    cursor: pointer;
+    color: var(--ink, #2a2320);
+  }
+  .tabla-visualizer:fullscreen .tabla-taal-name,
+  .tabla-visualizer.tabla-fs-fallback .tabla-taal-name {
+    display: block;
+    font-size: 2.2rem;
+  }
+  .tabla-visualizer:fullscreen .tabla-beat-count,
+  .tabla-visualizer.tabla-fs-fallback .tabla-beat-count {
+    font-size: 1.3rem;
+    margin: 0;
+  }
+  .tabla-visualizer:fullscreen .tabla-beats,
+  .tabla-visualizer.tabla-fs-fallback .tabla-beats {
+    justify-content: center;
+    gap: 1rem;
+    max-width: 90vw;
+  }
+  .tabla-visualizer:fullscreen .tabla-beats .bol,
+  .tabla-visualizer.tabla-fs-fallback .tabla-beats .bol {
+    font-size: 1.4rem;
+    min-width: 3.5rem;
+  }
+  .tabla-visualizer:fullscreen .tabla-beats .dot,
+  .tabla-visualizer.tabla-fs-fallback .tabla-beats .dot {
+    width: 2.5rem;
+    height: 2.5rem;
+    margin-bottom: 0.6rem;
+  }
+  .tabla-visualizer:fullscreen .tabla-beats .bol.sam .dot,
+  .tabla-visualizer.tabla-fs-fallback .tabla-beats .bol.sam .dot {
+    width: 3.1rem;
+    height: 3.1rem;
   }
 </style>
 
@@ -138,6 +320,7 @@ const selectDefault = presetTaal && TAALS[presetTaal] ? presetTaal : DEFAULT_TAA
   };
 
   let currentTaalName = DEFAULT_TAAL;
+  let currentBpm = TAALS[DEFAULT_TAAL].defaultTempo;
   let sequence = null;
   let isPlaying = false;
   const synths = {};
@@ -216,6 +399,14 @@ const selectDefault = presetTaal && TAALS[presetTaal] ? presetTaal : DEFAULT_TAA
     if (isPlaying) sequence.start(0);
   }
 
+  function updateHeaderLabels() {
+    instances.forEach((inst) => {
+      if (inst.taalLabel) inst.taalLabel.textContent = currentTaalName;
+      if (inst.tempoLabel) inst.tempoLabel.textContent = `${currentBpm} BPM`;
+      if (inst.fsTaalName) inst.fsTaalName.textContent = currentTaalName;
+    });
+  }
+
   function setTaal(name) {
     if (!TAALS[name]) return;
     currentTaalName = name;
@@ -223,15 +414,22 @@ const selectDefault = presetTaal && TAALS[presetTaal] ? presetTaal : DEFAULT_TAA
     instances.forEach((inst) => {
       inst.select.value = name;
       renderBeats(inst.beatsEl, name);
+      if (inst.beatCountEl) {
+        const count = TAALS[name].beats.length;
+        inst.beatCountEl.textContent = `${count} beat${count === 1 ? '' : 's'}`;
+      }
     });
+    updateHeaderLabels();
   }
 
   function setTempo(bpm) {
+    currentBpm = bpm;
     window.Tone.Transport.bpm.value = bpm;
     instances.forEach((inst) => {
       inst.tempoRange.value = String(bpm);
       inst.tempoValue.textContent = String(bpm);
     });
+    updateHeaderLabels();
   }
 
   async function togglePlay() {
@@ -251,6 +449,52 @@ const selectDefault = presetTaal && TAALS[presetTaal] ? presetTaal : DEFAULT_TAA
     });
   }
 
+  function toggleExpanded(inst) {
+    const expanded = inst.el.classList.toggle('expanded');
+    inst.toggleBtn.setAttribute('aria-expanded', String(expanded));
+    inst.toggleBtn.innerHTML = expanded ? '&#9660;' : '&#9650;';
+  }
+
+  function isVisualizerFullscreen(inst) {
+    return document.fullscreenElement === inst.visualizerEl || inst.visualizerEl.classList.contains('tabla-fs-fallback');
+  }
+
+  async function enterFullscreen(inst) {
+    if (inst.visualizerEl.requestFullscreen) {
+      try {
+        await inst.visualizerEl.requestFullscreen();
+        return;
+      } catch (err) {
+        // fall through to CSS fallback
+      }
+    }
+    inst.visualizerEl.classList.add('tabla-fs-fallback');
+  }
+
+  function exitFullscreen(inst) {
+    if (document.fullscreenElement === inst.visualizerEl) {
+      document.exitFullscreen();
+    }
+    inst.visualizerEl.classList.remove('tabla-fs-fallback');
+  }
+
+  function toggleFullscreen(inst) {
+    if (isVisualizerFullscreen(inst)) {
+      exitFullscreen(inst);
+    } else {
+      enterFullscreen(inst);
+    }
+  }
+
+  document.addEventListener('keydown', (e) => {
+    if (e.key !== 'Escape') return;
+    instances.forEach((inst) => {
+      if (inst.visualizerEl.classList.contains('tabla-fs-fallback')) {
+        inst.visualizerEl.classList.remove('tabla-fs-fallback');
+      }
+    });
+  });
+
   document.querySelectorAll('[data-tabla-player]').forEach((el) => {
     const inst = {
       el,
@@ -259,11 +503,22 @@ const selectDefault = presetTaal && TAALS[presetTaal] ? presetTaal : DEFAULT_TAA
       tempoRange: el.querySelector('[data-role="tempo-range"]'),
       tempoValue: el.querySelector('[data-role="tempo-value"]'),
       beatsEl: el.querySelector('[data-role="beats"]'),
+      beatCountEl: el.querySelector('[data-role="beat-count"]'),
+      visualizerEl: el.querySelector('[data-role="visualizer"]'),
+      fullscreenBtn: el.querySelector('[data-role="fullscreen"]'),
+      fullscreenCloseBtn: el.querySelector('[data-role="fullscreen-close"]'),
+      toggleBtn: el.querySelector('[data-role="toggle"]'),
+      taalLabel: el.querySelector('[data-role="taal-label"]'),
+      tempoLabel: el.querySelector('[data-role="tempo-label"]'),
+      fsTaalName: el.querySelector('[data-role="fs-taal-name"]'),
     };
     instances.push(inst);
     inst.playBtn.addEventListener('click', togglePlay);
     inst.select.addEventListener('change', (e) => setTaal(e.target.value));
     inst.tempoRange.addEventListener('input', (e) => setTempo(Number(e.target.value)));
+    inst.fullscreenBtn.addEventListener('click', () => toggleFullscreen(inst));
+    inst.fullscreenCloseBtn.addEventListener('click', () => exitFullscreen(inst));
+    if (inst.toggleBtn) inst.toggleBtn.addEventListener('click', () => toggleExpanded(inst));
   });
 
   const presetEl = document.querySelector('[data-tabla-player][data-preset-taal]');
