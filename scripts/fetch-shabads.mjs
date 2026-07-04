@@ -252,9 +252,12 @@ async function main() {
     }));
     shabad.firstLine = shabad.textLines[0] || '';
 
+    // Paudis (and other rahaao-less compositions) read better previewed by
+    // their closing line — usually the couplet's payoff — than by whichever
+    // line happens to come first after the "ਪਉੜੀ ੧੯"-style label.
     const rahaaoLine = shabad.lines.find((l) => l.r);
-    const firstRealLine = shabad.textLines.find((t) => !isFillerLine(t));
-    shabad.previewLine = (rahaaoLine && rahaaoLine.t) || firstRealLine || shabad.firstLine || '';
+    const lastRealLine = shabad.textLines.findLast((t) => !isFillerLine(t));
+    shabad.previewLine = (rahaaoLine && rahaaoLine.t) || lastRealLine || shabad.firstLine || '';
 
     delete shabad.lineTypes;
   }
