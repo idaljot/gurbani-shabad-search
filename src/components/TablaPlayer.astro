@@ -125,7 +125,7 @@ const selectDefault = presetTaal && TAALS[presetTaal] ? presetTaal : DEFAULT_TAA
 </style>
 
 <script>
-  import { TAALS, DEFAULT_TAAL, BOL_ALIASES } from '../data/taals.js';
+  import { TAALS, DEFAULT_TAAL, BOL_ALIASES, BASE_BOLS } from '../data/taals.js';
 
   const PITCHES = {
     dha: 'A1',
@@ -141,7 +141,16 @@ const selectDefault = presetTaal && TAALS[presetTaal] ? presetTaal : DEFAULT_TAA
   let sequence = null;
   let isPlaying = false;
   const synths = {};
+  const sampleBuffers = {};
   const instances = [];
+
+  // Real recordings win when present (see public/tabla/README.md); any bol
+  // without a matching file falls back to the synthesized placeholder below.
+  BASE_BOLS.forEach((base) => {
+    window.Tone.ToneAudioBuffer.load(`/tabla/${base}.wav`)
+      .then((buffer) => { sampleBuffers[base] = buffer; })
+      .catch(() => {});
+  });
 
   function getSynth(bol) {
     const base = BOL_ALIASES[bol] || bol.toLowerCase();
@@ -151,6 +160,18 @@ const selectDefault = presetTaal && TAALS[presetTaal] ? presetTaal : DEFAULT_TAA
       }).toDestination();
     }
     return { synth: synths[base], base };
+  }
+
+  function triggerBol(bol, time) {
+    const base = BOL_ALIASES[bol] || bol.toLowerCase();
+    if (sampleBuffers[base]) {
+      const player = new window.Tone.Player(sampleBuffers[base]).toDestination();
+      player.onstop = () => player.dispose();
+      player.start(time);
+    } else {
+      const { synth } = getSynth(bol);
+      synth.triggerAttackRelease(PITCHES[base] || 'C2', '8n', time);
+    }
   }
 
   function renderBeats(beatsEl, taalName) {
@@ -185,8 +206,7 @@ const selectDefault = presetTaal && TAALS[presetTaal] ? presetTaal : DEFAULT_TAA
         const index = step % taal.beats.length;
         step++;
         if (bol !== '-') {
-          const { synth, base } = getSynth(bol);
-          synth.triggerAttackRelease(PITCHES[base] || 'C2', '8n', time);
+          triggerBol(bol, time);
         }
         window.Tone.Draw.schedule(() => highlightBeat(index), time);
       },

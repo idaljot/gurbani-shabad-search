@@ -1,30 +1,29 @@
 # Credits
 
-## Tabla player audio (placeholder — no samples licensed yet)
+## Tabla player audio
 
-The tabla taal player (`src/components/TablaPlayer.astro`) currently synthesizes
-its 7 bols (`dha`, `dhin`, `na`, `tin`, `ta`, `ge`, `ke`) with `Tone.MembraneSynth`
-instead of using real tabla recordings.
+`public/tabla/dha.wav`, `dhin.wav`, `ge.wav`, `ke.wav`, `na.wav`, `ta.wav`, `tin.wav`
+are single tabla bol recordings by **msarkar** (Freesound pack
+["Tabla"](https://freesound.org/people/msarkar/packs/3571/)), converted from the
+original AIFF to WAV. Freesound lists that pack under the Creative Commons
+Sampling+ 1.0 license, which is narrower than a typical CC-BY grant (it's
+oriented around transformative sampling rather than embedding sounds
+unaltered) — the site owner (idaljot) contacted msarkar directly and got
+explicit permission to use these recordings as-is in this project.
 
-**Why:** a quick pass over Freesound.org and ragajunglism.org (2026-07-03) turned
-up no complete, confidently-licensed set of clean single-bol tabla samples:
+The `Tone.MembraneSynth` synthesized placeholder in
+`src/components/TablaPlayer.astro` is still used as an automatic fallback for
+any bol whose sample file is missing, so the player degrades gracefully
+rather than going silent.
 
-- ragajunglism.org has good theka references but states no reuse license for its
-  audio/content.
-- Freesound packs (e.g. `mmiron`'s "tabla bols" pack) have partial coverage
-  (missing clean `dha`/`dhin`/`tin`/`ta` hits) and licensing isn't shown at the
-  pack level — each individual sound's page would need to be checked one by one.
-- Commercial libraries (Noiiz, SampleFocus, Looperman) aren't clearly
-  redistributable in a public git repo.
+## Available but unused
 
-**To swap in real samples later:**
-
-1. Source one clean, confirmed-license WAV per bol and drop them in `public/tabla/`
-   named exactly: `dha.wav`, `dhin.wav`, `na.wav`, `tin.wav`, `ta.wav`, `ge.wav`, `ke.wav`.
-2. If any are CC-BY (not CC0), add attribution here, e.g.:
-   `- "dha.wav" by <author> (Freesound.org, CC-BY 4.0) — <link>`
-3. In `src/components/TablaPlayer.astro`, swap the `getSynthFor()` membrane-synth
-   fallback for a `Tone.Player` loading `/tabla/<bol>.wav` (Tone.Players with a
-   URLs map is the simplest option).
-
-No attribution currently required — everything audible is synthesized, not sampled.
+`sample-sources/8162__mmiron__tabla-bols/` — a CC0 ("Creative Commons 0", no
+attribution required) pack by **mmiron**
+([Freesound](https://freesound.org/people/mmiron/packs/8162/)) with more
+variety (multiple takes per bol, plus `ghe`/`na`/`ke`/`te`/`tun`/`tas`/`re`
+strokes) but no direct hit for `dha`, `dhin`, or `tin`. Kept in the repo (not
+under `public/`, so it isn't shipped to the live site) in case a future pass
+wants to blend in round-robin variation or fill different bols. msarkar's
+original pack is kept alongside it at `sample-sources/3571__msarkar__tabla/`
+for reference/license provenance.
