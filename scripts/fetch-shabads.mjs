@@ -58,7 +58,29 @@ function extractLines(raw, pageNum) {
       writer: line.writer?.english ?? 'Unknown',
       gurmukhi: line.gurmukhi?.unicode ?? '',
       translationEn: line.translation?.english?.default ?? '',
+      // The API's line `type` marks structural roles; type 3 is rahaao
+      // (confirmed by inspecting real angs — rahaao is always a 2-line
+      // couplet, both lines carry type 3, only the second literally ends
+      // in "ਰਹਾਉ"). Other structural labels (Paudi/Salok/Dohra headers)
+      // share type 4 with ordinary body lines, so they aren't detectable
+      // via `type` — see isFillerLine below for the text-based fallback.
+      type: line.type,
     }));
+}
+
+// Lines the API marks type 4 (ordinary body text) but that are actually
+// structural labels rather than real Gurbani content, e.g. "ਪਉੜੀ ੧੯"
+// (Paudi 19), "ਦੋਹਰਾ" (Dohra), "ਸਲੋਕੁ" (Salok) headers. These caused an
+// earlier bug where search previews showed the label instead of real text.
+const FILLER_PREFIXES = ['ਪਉੜੀ', 'ਸਲੋਕ', 'ਦੋਹਰਾ', 'ਦੋਹਾ'];
+function isFillerLine(text) {
+  const t = (text || '').trim();
+  if (!t) return true;
+  if (t.includes('ਮਹਲਾ')) return true;
+  if (t === 'ੴ ਸਤਿਗੁਰ ਪ੍ਰਸਾਦਿ ॥') return true;
+  const firstWord = t.split(/\s+/)[0] || '';
+  if (FILLER_PREFIXES.some((p) => firstWord.startsWith(p))) return true;
+  return false;
 }
 
 async function withConcurrency(items, limit, worker) {
@@ -192,6 +214,7 @@ async function main() {
               raag: l.raag,
               writer: l.writer,
               textLines: [],
+              lineTypes: [],
               taal: null,
               tempo: null,
               sthayi: null,
@@ -199,8 +222,11 @@ async function main() {
               notatedAt: null,
             });
           }
-          // Append every line's text (full shabad, in order).
-          shabadMap.get(l.shabadId).textLines.push(l.gurmukhi);
+          // Append every line's text (full shabad, in order), alongside its
+          // API `type` so rahaao (type 3) can be identified later.
+          const entry = shabadMap.get(l.shabadId);
+          entry.textLines.push(l.gurmukhi);
+          entry.lineTypes.push(l.type);
         }
       } catch (err) {
         console.error(`Skipping ${source.name} Ang ${pageNum}: ${err.message}`);
@@ -216,13 +242,21 @@ async function main() {
   }
 
   // Precompute per-line first-letters so search results can show the matched
-  // line (not always the first line of the shabad).
+  // line (not always the first line of the shabad), and mark rahaao lines
+  // (API type 3) so previews can prefer the refrain over a random opening line.
   for (const shabad of shabadMap.values()) {
-    shabad.lines = shabad.textLines.map((line) => ({
+    shabad.lines = shabad.textLines.map((line, i) => ({
       t: line,
       fl: firstLetters(line),
+      r: shabad.lineTypes[i] === 3,
     }));
     shabad.firstLine = shabad.textLines[0] || '';
+
+    const rahaaoLine = shabad.lines.find((l) => l.r);
+    const firstRealLine = shabad.textLines.find((t) => !isFillerLine(t));
+    shabad.previewLine = (rahaaoLine && rahaaoLine.t) || firstRealLine || shabad.firstLine || '';
+
+    delete shabad.lineTypes;
   }
 
   // Merge notation from the Google Sheet, with safe fallback.
