@@ -18,6 +18,7 @@ const hasNotation = Boolean(shabad.sthayi || shabad.antara || shabad.taal);
   <div class="shabad-header">
     <div class="tags">
       <span>Ang {shabad.ang}</span>
+      <span>{shabad.source || 'Guru Granth Sahib Ji'}</span>
       <span>{shabad.raag}</span>
       <span>{shabad.writer}</span>
       <span class="shabad-id">ID: {shabad.shabadId}</span>

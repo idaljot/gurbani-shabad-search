@@ -1,10 +1,11 @@
 /**
  * fetch-shabads.mjs
  * ------------------
- * Build script. Walks every Ang of Sri Guru Granth Sahib Ji via the public
- * GurbaniNow API, collects every unique Shabad with its full text, Raag,
- * Writer, and precomputed first-letters (for roman->gurmukhi search), then
- * merges in Sur/Taal notation from your published Google Sheet.
+ * Build script. Walks every Ang of each configured source (Guru Granth Sahib,
+ * Dasam Granth, Vaaran Bhai Gurdas, ...) via the public GurbaniNow API,
+ * collects every unique Shabad with its full text, Raag, Writer, and
+ * precomputed first-letters (for roman->gurmukhi search), then merges in
+ * Sur/Taal notation from your published Google Sheet.
  *
  * Run it with:  npm run fetch-data
  */
@@ -14,16 +15,28 @@ import path from 'node:path';
 import pkg from 'gurmukhi-utils';
 const { firstLetters, toUnicode } = pkg;
 const API_BASE = 'https://api.gurbaninow.com/v2';
-const TOTAL_ANGS = 1430;
 const CONCURRENCY = 8;
 const OUT_FILE = path.join('src', 'data', 'shabads.json');
+
+// Ang counts confirmed via each source's `source.length` field
+// (curl https://api.gurbaninow.com/v2/ang/1/<code>). Different sources have
+// different lengths — do not assume 1430 for all of them.
+const SOURCES = [
+  { code: 'G', name: 'Guru Granth Sahib Ji', angs: 1430 },
+  { code: 'D', name: 'Sri Dasam Granth', angs: 1428 },
+  { code: 'B', name: 'Vaaran Bhai Gurdas Ji', angs: 41 },
+  // Easy to add later — confirm each source's ang count first:
+  // { code: 'N', name: 'Bhai Nand Lal Ji', angs: 0 },
+  // { code: 'A', name: 'Amrit Keertan', angs: 0 },
+  // { code: 'U', name: 'Uggardanti', angs: 0 },
+];
 
 // Your published Google Sheet (Form responses), CSV format.
 const SHEET_CSV_URL =
   'https://docs.google.com/spreadsheets/d/e/2PACX-1vSUXqLcvoPkqgjSZVF5loJYuOHIwuJ_pS8sOZisOWydQCLXTL1kG2r3t4hiTQIpIloGGUAH4b_-srgH/pub?output=csv';
 
-async function fetchAng(pageNum) {
-  const res = await fetch(`${API_BASE}/ang/${pageNum}/G`);
+async function fetchAng(pageNum, sourceCode) {
+  const res = await fetch(`${API_BASE}/ang/${pageNum}/${sourceCode}`);
   if (!res.ok) throw new Error(`Ang ${pageNum} failed: HTTP ${res.status}`);
   return res.json();
 }
@@ -146,42 +159,61 @@ function parseTimestamp(raw) {
 }
 
 async function main() {
-  console.log(`Fetching ${TOTAL_ANGS} Angs from GurbaniNow (concurrency ${CONCURRENCY})...`);
-
-  const pages = Array.from({ length: TOTAL_ANGS }, (_, i) => i + 1);
   const shabadMap = new Map();
+  let collisions = 0;
 
-  let done = 0;
-  await withConcurrency(pages, CONCURRENCY, async (pageNum) => {
-    try {
-      const raw = await fetchAng(pageNum);
-      const lines = extractLines(raw, pageNum);
-      for (const l of lines) {
-        if (!l.shabadId) continue;
-        if (!shabadMap.has(l.shabadId)) {
-          shabadMap.set(l.shabadId, {
-            shabadId: l.shabadId,
-            ang: l.ang,
-            raag: l.raag,
-            writer: l.writer,
-            textLines: [],
-            taal: null,
-            tempo: null,
-            sthayi: null,
-            antara: null,
-            notatedAt: null,
-          });
+  for (const source of SOURCES) {
+    console.log(`\nFetching ${source.angs} Angs of ${source.name} (${source.code}), concurrency ${CONCURRENCY}...`);
+
+    const pages = Array.from({ length: source.angs }, (_, i) => i + 1);
+    let done = 0;
+    await withConcurrency(pages, CONCURRENCY, async (pageNum) => {
+      try {
+        const raw = await fetchAng(pageNum, source.code);
+        const lines = extractLines(raw, pageNum);
+        for (const l of lines) {
+          if (!l.shabadId) continue;
+          const existing = shabadMap.get(l.shabadId);
+          if (existing && existing.source !== source.name) {
+            // Shabad IDs were sampled and found unique across sources, but the
+            // full crawl covers many more angs than that sample — guard against
+            // silently merging two different shabads from different sources.
+            collisions++;
+            console.warn(
+              `\nWARNING: shabad ID ${l.shabadId} appears in both "${existing.source}" and "${source.name}" — skipping the second occurrence to avoid corrupting data.`
+            );
+            continue;
+          }
+          if (!existing) {
+            shabadMap.set(l.shabadId, {
+              shabadId: l.shabadId,
+              source: source.name,
+              ang: l.ang,
+              raag: l.raag,
+              writer: l.writer,
+              textLines: [],
+              taal: null,
+              tempo: null,
+              sthayi: null,
+              antara: null,
+              notatedAt: null,
+            });
+          }
+          // Append every line's text (full shabad, in order).
+          shabadMap.get(l.shabadId).textLines.push(l.gurmukhi);
         }
-        // Append every line's text (full shabad, in order).
-        shabadMap.get(l.shabadId).textLines.push(l.gurmukhi);
+      } catch (err) {
+        console.error(`Skipping ${source.name} Ang ${pageNum}: ${err.message}`);
+      } finally {
+        done++;
+        if (done % 100 === 0) console.log(`  ...${done}/${source.angs} Angs processed`);
       }
-    } catch (err) {
-      console.error(`Skipping Ang ${pageNum}: ${err.message}`);
-    } finally {
-      done++;
-      if (done % 100 === 0) console.log(`  ...${done}/${TOTAL_ANGS} Angs processed`);
-    }
-  });
+    });
+  }
+
+  if (collisions > 0) {
+    console.warn(`\n${collisions} cross-source shabad ID collision(s) detected — see warnings above.`);
+  }
 
   // Precompute first-letters for each shabad (concatenated across all its lines).
   for (const shabad of shabadMap.values()) {
