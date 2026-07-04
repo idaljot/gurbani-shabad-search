@@ -96,7 +96,7 @@ const browsableRaags = Object.keys(RAAGS)
         <ul class="recent-list">
           {recentlyNotated.map((s) => (
             <li>
-              <a class="result-card" href={`./shabad/${s.id}/`}>
+              <a class="result-card" href={`/shabad/${s.id}/`}>
                 <div class="gurmukhi">{s.preview}</div>
                 <div class="meta">
                   <span>Ang {s.ang}</span>
@@ -116,7 +116,7 @@ const browsableRaags = Object.keys(RAAGS)
         </p>
       )}
       {notatedCount > 0 && (
-        <a class="view-all-link" href="./notated/">View all notated shabads &rarr;</a>
+        <a class="view-all-link" href="/notated/">View all notated shabads &rarr;</a>
       )}
     </section>
 
@@ -124,7 +124,7 @@ const browsableRaags = Object.keys(RAAGS)
       <h2>Browse by Raag</h2>
       <div class="raag-chips">
         {browsableRaags.map((r) => (
-          <a class="raag-chip" href={`./raag/${encodeURIComponent(r.name)}/`}>
+          <a class="raag-chip" href={`/raag/${encodeURIComponent(r.name)}/`}>
             {r.name} <span class="raag-chip-count">{r.count}</span>
           </a>
         ))}
@@ -222,7 +222,7 @@ const browsableRaags = Object.keys(RAAGS)
 
       resultsEl.innerHTML = matches
         .slice(0, 200)
-        .map(({ s, preview }) => '<li><a class="dropdown-item" href="./shabad/' + s.id + '/">' +
+        .map(({ s, preview }) => '<li><a class="dropdown-item" href="/shabad/' + s.id + '/">' +
           '<div class="dropdown-line">' + (preview || '') + '</div>' +
           '<div class="dropdown-tags">' +
           '<span>' + s.raag + '</span>' +

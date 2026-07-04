@@ -20,7 +20,7 @@ const raags = [...new Set(records.map((s) => s.raag))].sort();
 const taals = [...new Set(records.map((s) => s.taal).filter(Boolean))].sort();
 ---
 <Layout title="All Notated Shabads · Gurbani Kirtan Swar Notation">
-  <p class="back"><a href="./">&larr; Back to search</a></p>
+  <p class="back"><a href="/">&larr; Back to search</a></p>
   <h1>All Notated Shabads</h1>
   <p class="subtitle">{records.length} shabads with sur &amp; taal notation</p>
 
@@ -61,7 +61,7 @@ const taals = [...new Set(records.map((s) => s.taal).filter(Boolean))].sort();
       countEl.textContent = matches.length + ' result' + (matches.length === 1 ? '' : 's');
 
       resultsEl.innerHTML = matches
-        .map((s) => '<li><a class="result-card" href="./shabad/' + s.id + '/">' +
+        .map((s) => '<li><a class="result-card" href="/shabad/' + s.id + '/">' +
           '<div class="gurmukhi">' + (s.preview || '') + '</div>' +
           '<div class="meta">' +
           '<span>Ang ' + s.ang + '</span>' +

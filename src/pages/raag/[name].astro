@@ -34,7 +34,7 @@ const hasMusicalInfo = Boolean(
 const hasPlaylist = Boolean(raagInfo && raagInfo.youtubePlaylist);
 ---
 <Layout title={`${name} · Gurbani Kirtan Swar Notation`}>
-  <p class="back"><a href="../../">&larr; Back to search</a></p>
+  <p class="back"><a href="/">&larr; Back to search</a></p>
   <h1>{name}</h1>
   <p class="subtitle">{raagShabads.length} shabad{raagShabads.length === 1 ? '' : 's'}</p>
 
@@ -66,7 +66,7 @@ const hasPlaylist = Boolean(raagInfo && raagInfo.youtubePlaylist);
   <ul class="recent-list">
     {raagShabads.map((s) => (
       <li>
-        <a class="result-card" href={`../../shabad/${s.id}/`}>
+        <a class="result-card" href={`/shabad/${s.id}/`}>
           <div class="gurmukhi">{s.preview}</div>
           <div class="meta">
             <span>Ang {s.ang}</span>
