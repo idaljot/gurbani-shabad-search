@@ -24,6 +24,13 @@ const raagShabads = shabads
     hasNotation: Boolean(s.sthayi || s.antara || s.taal),
   }));
 
+// Surface notated shabads first (max 3) since they're the ones a class can
+// actually sing along with sur; the general list below is trimmed too so a
+// large raag (hundreds of shabads) doesn't dump an unusable wall of cards.
+const notatedInRaag = raagShabads.filter((s) => s.hasNotation).slice(0, 3);
+const notatedIds = new Set(notatedInRaag.map((s) => s.id));
+const generalList = raagShabads.filter((s) => !notatedIds.has(s.id)).slice(0, 5);
+
 const hasMusicalInfo = Boolean(
   raagInfo && (
     raagInfo.thaat || raagInfo.arohi || raagInfo.avrohi || raagInfo.vadi || raagInfo.samvadi ||
@@ -62,9 +69,33 @@ const hasPlaylist = Boolean(raagInfo && raagInfo.youtubePlaylist);
     <p class="raag-coming-soon">Detailed raag information coming soon.</p>
   )}
 
+  {notatedInRaag.length > 0 && (
+    <section class="notated-section">
+      <h2>Notated in this Raag</h2>
+      <ul class="recent-list">
+        {notatedInRaag.map((s) => (
+          <li>
+            <a class="result-card" href={`/shabad/${s.id}/`}>
+              <div class="gurmukhi">{s.preview}</div>
+              <div class="meta">
+                <span>Ang {s.ang}</span>
+                <span>{s.source}</span>
+                <span>{s.writer}</span>
+                {s.taal && <span class="taal">{s.taal}</span>}
+                <span class="has-sur">sur &#10003;</span>
+              </div>
+            </a>
+          </li>
+        ))}
+      </ul>
+      <a class="view-all-link" href="/notated/">View all notated shabads &rarr;</a>
+    </section>
+  )}
+
   <h2>Shabads in {name}</h2>
+  <p class="showing-count">Showing {generalList.length} of {raagShabads.length}</p>
   <ul class="recent-list">
-    {raagShabads.map((s) => (
+    {generalList.map((s) => (
       <li>
         <a class="result-card" href={`/shabad/${s.id}/`}>
           <div class="gurmukhi">{s.preview}</div>
@@ -98,6 +129,13 @@ const hasPlaylist = Boolean(raagInfo && raagInfo.youtubePlaylist);
       color: var(--muted); font-weight: 600; margin: 0 0 0.75rem;
       font-family: var(--font-body);
     }
+    .notated-section { margin-bottom: 2rem; }
+    .view-all-link {
+      display: inline-block; margin-top: 0.9rem; color: var(--accent);
+      font-size: 0.9rem; font-weight: 600; text-decoration: none;
+    }
+    .view-all-link:hover { text-decoration: underline; }
+    .showing-count { color: var(--muted); font-size: 0.85rem; margin: 0 0 0.85rem; }
     .recent-list { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 0.85rem; }
     .result-card {
       display: block; background: var(--panel); border: 1px solid var(--border);
