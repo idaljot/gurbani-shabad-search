@@ -2,6 +2,7 @@
 import Layout from '../../layouts/Layout.astro';
 import TablaPlayer from '../../components/TablaPlayer.astro';
 import shabads from '../../data/shabads.json';
+import { RAAGS } from '../../data/raags.js';
 
 export function getStaticPaths() {
   return shabads.map((s) => ({
@@ -12,6 +13,17 @@ export function getStaticPaths() {
 
 const { shabad } = Astro.props;
 const hasNotation = Boolean(shabad.sthayi || shabad.antara || shabad.taal);
+
+const raagInfo = RAAGS[shabad.raag];
+const hasMusicalInfo = Boolean(
+  raagInfo && (
+    raagInfo.thaat || raagInfo.arohi || raagInfo.avrohi || raagInfo.vadi || raagInfo.samvadi ||
+    (raagInfo.komal && raagInfo.komal.length) || (raagInfo.teevra && raagInfo.teevra.length) ||
+    (raagInfo.varjit && raagInfo.varjit.length) || raagInfo.time || raagInfo.mood || raagInfo.notes
+  )
+);
+const hasPlaylist = Boolean(raagInfo && raagInfo.youtubePlaylist);
+const showRaagSection = hasMusicalInfo || hasPlaylist;
 ---
 <Layout title={`${shabad.raag} · ${shabad.writer}`}>
   <p class="back"><a href="../../">&larr; Back to search</a></p>
@@ -73,6 +85,36 @@ const hasNotation = Boolean(shabad.sthayi || shabad.antara || shabad.taal);
     </p>
   )}
 
+  {showRaagSection && (
+    <details class="raag-section">
+      <summary>About this Raag &mdash; {shabad.raag}</summary>
+      <div class="raag-body">
+        {hasPlaylist && (
+          <a class="raag-youtube" href={raagInfo.youtubePlaylist} target="_blank" rel="noopener">
+            &#9654; Watch on YouTube
+          </a>
+        )}
+        {hasMusicalInfo ? (
+          <dl class="raag-facts">
+            {raagInfo.thaat && <><dt>Thaat</dt><dd>{raagInfo.thaat}</dd></>}
+            {raagInfo.arohi && <><dt>Arohi</dt><dd>{raagInfo.arohi}</dd></>}
+            {raagInfo.avrohi && <><dt>Avrohi</dt><dd>{raagInfo.avrohi}</dd></>}
+            {raagInfo.vadi && <><dt>Vadi</dt><dd>{raagInfo.vadi}</dd></>}
+            {raagInfo.samvadi && <><dt>Samvadi</dt><dd>{raagInfo.samvadi}</dd></>}
+            {raagInfo.komal && raagInfo.komal.length > 0 && <><dt>Komal swars</dt><dd>{raagInfo.komal.join(', ')}</dd></>}
+            {raagInfo.teevra && raagInfo.teevra.length > 0 && <><dt>Teevra swars</dt><dd>{raagInfo.teevra.join(', ')}</dd></>}
+            {raagInfo.varjit && raagInfo.varjit.length > 0 && <><dt>Varjit swars</dt><dd>{raagInfo.varjit.join(', ')}</dd></>}
+            {raagInfo.time && <><dt>Time</dt><dd>{raagInfo.time}</dd></>}
+            {raagInfo.mood && <><dt>Mood</dt><dd>{raagInfo.mood}</dd></>}
+            {raagInfo.notes && <><dt>Notes</dt><dd>{raagInfo.notes}</dd></>}
+          </dl>
+        ) : (
+          <p class="raag-coming-soon">Detailed raag information coming soon.</p>
+        )}
+      </div>
+    </details>
+  )}
+
   <style>
     .back { margin: 0 0 1rem; }
     .back a { color: var(--accent); text-decoration: none; font-size: 0.9rem; }
@@ -117,5 +159,23 @@ const hasNotation = Boolean(shabad.sthayi || shabad.antara || shabad.taal);
       background: var(--panel); border: 1px dashed var(--border);
       border-radius: 8px; padding: 0.8rem 1rem;
     }
+
+    .raag-section {
+      margin-top: 1.25rem; background: var(--panel); border: 1px solid var(--border);
+      border-radius: 10px; padding: 0.9rem 1.1rem;
+    }
+    .raag-section summary {
+      cursor: pointer; font-weight: 600; font-size: 0.95rem; color: var(--accent);
+    }
+    .raag-body { margin-top: 0.9rem; }
+    .raag-youtube {
+      display: inline-block; background: var(--accent); color: #fff; text-decoration: none;
+      font-size: 0.9rem; font-weight: 600; padding: 0.5rem 0.9rem; border-radius: 999px;
+      margin-bottom: 0.8rem;
+    }
+    .raag-facts { display: grid; grid-template-columns: auto 1fr; gap: 0.35rem 1rem; margin: 0; font-size: 0.9rem; }
+    .raag-facts dt { color: var(--muted); font-weight: 600; }
+    .raag-facts dd { margin: 0; }
+    .raag-coming-soon { margin: 0; color: var(--muted); font-size: 0.9rem; }
   </style>
 </Layout>

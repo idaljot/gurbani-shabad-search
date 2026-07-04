@@ -1,4 +1,5 @@
 ---
+import { RESOURCE_PLAYLISTS } from '../data/raags.js';
 const { title = 'Gurbani Kirtan Swar Notation' } = Astro.props;
 ---
 <!doctype html>
@@ -38,11 +39,36 @@ const { title = 'Gurbani Kirtan Swar Notation' } = Astro.props;
         color: var(--muted);
         margin-top: 0;
       }
+      .site-footer {
+        max-width: 900px;
+        margin: 0 auto;
+        padding: 1.5rem 1.25rem 2.5rem;
+        border-top: 1px solid var(--border);
+        color: var(--muted);
+        font-size: 0.85rem;
+      }
+      .footer-playlists {
+        margin: 0;
+      }
+      .footer-playlists a {
+        color: var(--accent);
+      }
     </style>
   </head>
   <body>
     <main>
       <slot />
     </main>
+    <footer class="site-footer">
+      <p class="footer-playlists">
+        More class resources:
+        {Object.entries(RESOURCE_PLAYLISTS).map(([name, url], i) => (
+          <>
+            {i > 0 && ' · '}
+            <a href={url} target="_blank" rel="noopener">{name}</a>
+          </>
+        ))}
+      </p>
+    </footer>
   </body>
 </html>
