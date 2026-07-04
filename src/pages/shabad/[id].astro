@@ -116,11 +116,11 @@ const showRaagSection = hasMusicalInfo || hasPlaylist;
   )}
 
   <style>
-    .back { margin: 0 0 1rem; }
+    .back { margin: 0 0 1.25rem; }
     .back a { color: var(--accent); text-decoration: none; font-size: 0.9rem; }
-    .shabad-header { margin-bottom: 1.25rem; }
-    .tags { display: flex; gap: 0.5rem; flex-wrap: wrap; font-size: 0.8rem; margin-bottom: 0.6rem; }
-    .tags span { background: var(--accent-soft); color: var(--accent); padding: 0.15rem 0.6rem; border-radius: 999px; }
+    .shabad-header { margin-bottom: 1.5rem; }
+    .tags { display: flex; gap: 0.5rem; flex-wrap: wrap; font-size: 0.78rem; margin-bottom: 0.75rem; }
+    .tags span { background: var(--accent-soft); color: var(--accent); padding: 0.15rem 0.6rem; border-radius: 999px; font-weight: 500; }
     .tags span.shabad-id { background: transparent; border: 1px solid var(--border); color: var(--muted); }
     .taal-bar {
       display: flex; gap: 1.25rem; flex-wrap: wrap; background: #fbf0dd;
@@ -128,7 +128,7 @@ const showRaagSection = hasMusicalInfo || hasPlaylist;
     }
     .taal-bar strong { font-weight: 600; }
 
-    .panels { display: grid; gap: 1.25rem; }
+    .panels { display: grid; gap: 1.5rem; margin-top: 1.5rem; }
     .panels.two { grid-template-columns: 1fr 1fr; }
     .panels.one { grid-template-columns: 1fr; }
     @media (max-width: 700px) {
@@ -137,43 +137,50 @@ const showRaagSection = hasMusicalInfo || hasPlaylist;
 
     section h2 {
       font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.05em;
-      color: var(--muted); font-weight: 600; margin: 0 0 0.6rem;
+      color: var(--muted); font-weight: 600; margin: 0 0 0.75rem;
+      font-family: var(--font-body);
     }
     .text-panel, .notation-panel {
       background: var(--panel); border: 1px solid var(--border);
-      border-radius: 10px; padding: 1rem 1.15rem;
+      border-radius: 10px; padding: 1.25rem 1.4rem;
     }
-    .lines { display: flex; flex-direction: column; gap: 0.35rem; }
-    .line { margin: 0; font-size: 1.15rem; line-height: 1.6; }
+    .notation-panel {
+      background: #fdf6ee;
+      border-color: #ecdcc4;
+    }
+    .lines { display: flex; flex-direction: column; gap: 0.45rem; }
+    .line { margin: 0; font-size: 1.15rem; line-height: 1.7; font-family: var(--font-gurmukhi); }
 
-    .block { margin-bottom: 1rem; }
+    .block { margin-bottom: 1.25rem; }
     .block:last-child { margin-bottom: 0; }
-    .block-label { margin: 0 0 0.3rem; font-size: 0.9rem; font-weight: 600; color: var(--accent); }
+    .block-label { margin: 0 0 0.4rem; font-size: 0.9rem; font-weight: 600; color: var(--accent); font-family: var(--font-body); }
     pre {
-      margin: 0; font-family: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
-      font-size: 0.95rem; line-height: 1.7; white-space: pre; overflow-x: auto;
-      background: var(--bg); padding: 0.6rem 0.75rem; border-radius: 6px;
+      margin: 0; font-family: var(--font-gurmukhi), ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+      font-size: 1.05rem; line-height: 1.9; white-space: pre; overflow-x: auto;
+      background: #fffdf9; padding: 0.85rem 1rem; border-radius: 4px;
+      border-left: 3px solid var(--accent);
     }
     .no-sur {
-      margin-top: 1.25rem; color: var(--muted); font-size: 0.9rem;
+      margin-top: 1.5rem; color: var(--muted); font-size: 0.9rem;
       background: var(--panel); border: 1px dashed var(--border);
       border-radius: 8px; padding: 0.8rem 1rem;
     }
 
     .raag-section {
-      margin-top: 1.25rem; background: var(--panel); border: 1px solid var(--border);
-      border-radius: 10px; padding: 0.9rem 1.1rem;
+      margin-top: 1.5rem; background: #f4f1ea; border: 1px solid var(--border);
+      border-radius: 10px; padding: 1rem 1.25rem;
     }
     .raag-section summary {
       cursor: pointer; font-weight: 600; font-size: 0.95rem; color: var(--accent);
+      font-family: var(--font-body);
     }
-    .raag-body { margin-top: 0.9rem; }
+    .raag-body { margin-top: 1rem; }
     .raag-youtube {
       display: inline-block; background: var(--accent); color: #fff; text-decoration: none;
       font-size: 0.9rem; font-weight: 600; padding: 0.5rem 0.9rem; border-radius: 999px;
       margin-bottom: 0.8rem;
     }
-    .raag-facts { display: grid; grid-template-columns: auto 1fr; gap: 0.35rem 1rem; margin: 0; font-size: 0.9rem; }
+    .raag-facts { display: grid; grid-template-columns: auto 1fr; gap: 0.4rem 1rem; margin: 0; font-size: 0.9rem; }
     .raag-facts dt { color: var(--muted); font-weight: 600; }
     .raag-facts dd { margin: 0; }
     .raag-coming-soon { margin: 0; color: var(--muted); font-size: 0.9rem; }
