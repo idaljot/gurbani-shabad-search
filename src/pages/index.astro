@@ -3,25 +3,13 @@ import Layout from '../layouts/Layout.astro';
 import TablaPlayer from '../components/TablaPlayer.astro';
 import shabads from '../data/shabads.json';
 
-// Many shabads open with a generic "Raag X Mahalla N ॥" header (or the short
-// "ੴ ਸਤਿਗੁਰ ਪ੍ਰਸਾਦਿ ॥" invocation) that's identical across dozens of shabads
-// in the same raag, so it can't tell two search results apart. Skip those
-// when picking the line to preview.
-function isFillerLine(line) {
-  const t = (line || '').trim();
-  if (!t) return true;
-  if (t.includes('ਮਹਲਾ')) return true;
-  if (t === 'ੴ ਸਤਿਗੁਰ ਪ੍ਰਸਾਦਿ ॥') return true;
-  return false;
-}
-
 const records = shabads.map((s) => ({
   id: s.shabadId,
   source: s.source || 'Guru Granth Sahib Ji',
   ang: s.ang,
   raag: s.raag,
   writer: s.writer,
-  preview: s.textLines.find((l) => !isFillerLine(l)) || s.firstLine || '',
+  preview: s.previewLine || s.firstLine || '',
   lines: s.lines,
   hasNotation: Boolean(s.sthayi || s.antara || s.taal),
   taal: s.taal || null,
@@ -37,7 +25,7 @@ const notatedCount = records.filter((s) => s.hasNotation).length;
 const recentlyNotated = records
   .filter((s) => s.hasNotation && s.notatedAt)
   .sort((a, b) => new Date(b.notatedAt) - new Date(a.notatedAt))
-  .slice(0, 6);
+  .slice(0, 3);
 ---
 <Layout title="Gurbani Kirtan Swar Notation">
   <h1>Gurbani Kirtan Swar Notation</h1>
@@ -114,6 +102,9 @@ const recentlyNotated = records
           No shabads have notation yet — once sur/taal is submitted through the
           notation form, the newest additions will appear here first.
         </p>
+      )}
+      {notatedCount > 0 && (
+        <a class="view-all-link" href="./notated/">View all notated shabads &rarr;</a>
       )}
     </section>
   </div>
@@ -304,5 +295,10 @@ const recentlyNotated = records
       background: var(--panel); border: 1px dashed var(--border);
       border-radius: 8px; padding: 0.8rem 1rem;
     }
+    .view-all-link {
+      display: inline-block; margin-top: 0.9rem; color: var(--accent);
+      font-size: 0.9rem; font-weight: 600; text-decoration: none;
+    }
+    .view-all-link:hover { text-decoration: underline; }
   </style>
 </Layout>

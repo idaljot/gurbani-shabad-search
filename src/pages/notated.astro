@@ -1,0 +1,111 @@
+---
+import Layout from '../layouts/Layout.astro';
+import shabads from '../data/shabads.json';
+
+const records = shabads
+  .filter((s) => Boolean(s.sthayi || s.antara || s.taal))
+  .map((s) => ({
+    id: s.shabadId,
+    source: s.source || 'Guru Granth Sahib Ji',
+    ang: s.ang,
+    raag: s.raag,
+    writer: s.writer,
+    preview: s.previewLine || s.firstLine || '',
+    taal: s.taal || null,
+    notatedAt: s.notatedAt || null,
+  }))
+  .sort((a, b) => new Date(b.notatedAt || 0) - new Date(a.notatedAt || 0));
+
+const raags = [...new Set(records.map((s) => s.raag))].sort();
+const taals = [...new Set(records.map((s) => s.taal).filter(Boolean))].sort();
+---
+<Layout title="All Notated Shabads · Gurbani Kirtan Swar Notation">
+  <p class="back"><a href="./">&larr; Back to search</a></p>
+  <h1>All Notated Shabads</h1>
+  <p class="subtitle">{records.length} shabads with sur &amp; taal notation</p>
+
+  <div id="filters">
+    <select id="filter-raag">
+      <option value="">All Raags</option>
+      {raags.map((r) => <option value={r}>{r}</option>)}
+    </select>
+    <select id="filter-taal">
+      <option value="">All Taals</option>
+      {taals.map((t) => <option value={t}>{t}</option>)}
+    </select>
+    <button id="clear-filters" type="button">Clear</button>
+  </div>
+
+  <p id="result-count"></p>
+  <ul id="results" class="recent-list"></ul>
+
+  <script type="application/json" id="notated-data" set:html={JSON.stringify(records)} />
+
+  <script>
+    const records = JSON.parse(document.getElementById('notated-data').textContent);
+    const filterRaag = document.getElementById('filter-raag');
+    const filterTaal = document.getElementById('filter-taal');
+    const clearBtn = document.getElementById('clear-filters');
+    const resultsEl = document.getElementById('results');
+    const countEl = document.getElementById('result-count');
+
+    function render() {
+      const raag = filterRaag.value;
+      const taal = filterTaal.value;
+      const matches = records.filter((s) => {
+        if (raag && s.raag !== raag) return false;
+        if (taal && s.taal !== taal) return false;
+        return true;
+      });
+
+      countEl.textContent = matches.length + ' result' + (matches.length === 1 ? '' : 's');
+
+      resultsEl.innerHTML = matches
+        .map((s) => '<li><a class="result-card" href="./shabad/' + s.id + '/">' +
+          '<div class="gurmukhi">' + (s.preview || '') + '</div>' +
+          '<div class="meta">' +
+          '<span>Ang ' + s.ang + '</span>' +
+          '<span>' + s.source + '</span>' +
+          '<span>' + s.raag + '</span>' +
+          '<span>' + s.writer + '</span>' +
+          (s.taal ? '<span class="taal">' + s.taal + '</span>' : '') +
+          '</div></a></li>')
+        .join('');
+    }
+
+    [filterRaag, filterTaal].forEach((el) => el.addEventListener('change', render));
+    clearBtn.addEventListener('click', () => {
+      filterRaag.value = '';
+      filterTaal.value = '';
+      render();
+    });
+
+    render();
+  </script>
+
+  <style>
+    .back { margin: 0 0 1rem; }
+    .back a { color: var(--accent); text-decoration: none; font-size: 0.9rem; }
+    #filters { display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center; margin: 1.25rem 0; }
+    #filters select, #filters button {
+      padding: 0.5rem 0.75rem; border: 1px solid var(--border);
+      border-radius: 8px; background: var(--panel); font-size: 0.95rem;
+    }
+    #filters button { cursor: pointer; color: var(--accent); font-weight: 600; }
+    #result-count { color: var(--muted); font-size: 0.9rem; margin: 0.25rem 0 1.25rem; }
+    #results { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 0.85rem; }
+
+    /* Rows are injected via innerHTML at runtime, so these must be :global()
+       or Astro's scoping attribute never matches them — see the equivalent
+       note in index.astro / TablaPlayer.astro. */
+    :global(.result-card) {
+      display: block; background: var(--panel); border: 1px solid var(--border);
+      border-radius: 10px; padding: 1.05rem 1.2rem; text-decoration: none; color: inherit;
+      transition: box-shadow 0.15s, border-color 0.15s;
+    }
+    :global(.result-card:hover) { border-color: var(--border); box-shadow: 0 4px 16px rgba(42, 35, 32, 0.1); }
+    :global(.gurmukhi) { font-family: var(--font-gurmukhi); font-size: 1.25rem; margin-bottom: 0.55rem; line-height: 1.5; }
+    :global(.meta) { display: flex; gap: 0.4rem; flex-wrap: wrap; font-size: 0.72rem; }
+    :global(.meta span) { background: var(--accent-soft); color: var(--accent); padding: 0.15rem 0.55rem; border-radius: 999px; font-weight: 500; }
+  </style>
+</Layout>
