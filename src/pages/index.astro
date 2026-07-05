@@ -25,13 +25,6 @@ const browsableRaags = Object.keys(RAAGS)
   .filter((name) => raagCounts.has(name))
   .map((name) => ({ name, count: raagCounts.get(name) }))
   .sort((a, b) => a.name.localeCompare(b.name));
-
-// The client-side search only reads these fields — `ang` and `notatedAt`
-// are only needed for the build-time sections above (Recently Notated),
-// so they're dropped here to keep the embedded payload minimal.
-const clientRecords = records.map(({ id, source, raag, writer, preview, taal, hasNotation, lines }) => ({
-  id, source, raag, writer, preview, taal, hasNotation, lines,
-}));
 ---
 <Layout title="Gurbani Kirtan Swar Notation">
   <h1>Gurbani Kirtan Swar Notation</h1>
@@ -51,33 +44,34 @@ const clientRecords = records.map(({ id, source, raag, writer, preview, taal, ha
         autocomplete="off"
         autocapitalize="off"
         spellcheck="false"
-        placeholder="Type first letters, e.g. gmsshn"
+        placeholder="Loading search index…"
+        disabled
       />
-      <p id="gurmukhi-preview" aria-live="polite"></p>
+      <p id="gurmukhi-preview" aria-live="polite">Loading search index…</p>
       <div id="results-panel" class="results-panel" hidden>
         <p id="result-count"></p>
         <ul id="results"></ul>
       </div>
     </div>
     <div id="filters">
-      <select id="filter-source" aria-label="Filter by source">
+      <select id="filter-source" aria-label="Filter by source" disabled>
         <option value="">All Sources</option>
         {sources.map((s) => <option value={s}>{s}</option>)}
       </select>
-      <select id="filter-raag" aria-label="Filter by raag">
+      <select id="filter-raag" aria-label="Filter by raag" disabled>
         <option value="">All Raags</option>
         {raags.map((r) => <option value={r}>{r}</option>)}
       </select>
-      <select id="filter-writer" aria-label="Filter by writer">
+      <select id="filter-writer" aria-label="Filter by writer" disabled>
         <option value="">All Writers</option>
         {writers.map((w) => <option value={w}>{w}</option>)}
       </select>
-      <select id="filter-taal" aria-label="Filter by taal">
+      <select id="filter-taal" aria-label="Filter by taal" disabled>
         <option value="">All Taals</option>
         {taals.map((t) => <option value={t}>{t}</option>)}
       </select>
       <label id="notated-toggle">
-        <input type="checkbox" id="filter-notated" /> Only with sur/taal
+        <input type="checkbox" id="filter-notated" disabled /> Only with sur/taal
       </label>
       <button id="clear-filters" type="button">Clear</button>
     </div>
@@ -128,8 +122,6 @@ const clientRecords = records.map(({ id, source, raag, writer, preview, taal, ha
 
   <TablaPlayer id="floating-tabla" variant="floating" />
 
-  <script type="application/json" id="shabad-data" set:html={JSON.stringify(clientRecords)} />
-
   <script>
     const KEYMAP = {
       a: '\u0a73', A: '\u0a05', e: '\u0a72', E: '\u0a13', s: '\u0a38', S: '\u0a36\u0a3c', h: '\u0a39',
@@ -152,7 +144,15 @@ const clientRecords = records.map(({ id, source, raag, writer, preview, taal, ha
       return out;
     }
 
-    const shabads = JSON.parse(document.getElementById('shabad-data').textContent);
+    // Loaded via fetch() instead of an inlined <script type="application/json">
+    // blob — the previous approach embedded ~19MB directly in the HTML
+    // document, which meant the browser couldn't paint anything (the search
+    // box, filters, Recently Notated, ...) until that whole document had
+    // arrived. Fetching it separately lets the page shell render immediately;
+    // the search box stays disabled with a loading placeholder until this
+    // resolves, so there's never a window where typing silently does nothing.
+    let shabads = null;
+
     const searchBox = document.getElementById('search-box');
     const preview = document.getElementById('gurmukhi-preview');
     const filterSource = document.getElementById('filter-source');
@@ -166,6 +166,24 @@ const clientRecords = records.map(({ id, source, raag, writer, preview, taal, ha
     const resultsPanel = document.getElementById('results-panel');
     const homepageSections = document.getElementById('homepage-sections');
 
+    const loadingInputs = [searchBox, filterSource, filterRaag, filterWriter, filterTaal, filterNotated];
+
+    fetch('/search-index.json')
+      .then((res) => {
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        return res.json();
+      })
+      .then((data) => {
+        shabads = data;
+        loadingInputs.forEach((el) => { el.disabled = false; });
+        searchBox.placeholder = 'Type first letters, e.g. gmsshn';
+        preview.textContent = '';
+      })
+      .catch(() => {
+        searchBox.placeholder = 'Search unavailable — please reload';
+        preview.textContent = 'Search index failed to load — please reload the page.';
+      });
+
     // The dropdown activates on either typed text or any filter \u2014 a raag/taal
     // filter chosen with an empty search box should still browse shabads via
     // the dropdown, not sit inert until the user also types something.
@@ -176,6 +194,7 @@ const clientRecords = records.map(({ id, source, raag, writer, preview, taal, ha
     }
 
     function render() {
+      if (!shabads) return;
       const raw = searchBox.value.trim();
       const query = romanToGurmukhi(raw).replace(/\s+/g, '');
       preview.textContent = raw ? 'Searching: ' + romanToGurmukhi(raw) : '';
@@ -251,6 +270,7 @@ const clientRecords = records.map(({ id, source, raag, writer, preview, taal, ha
       width: 100%; padding: 0.8rem 1rem; font-size: 1.05rem; border: 1px solid var(--border);
       border-radius: 8px; background: var(--panel);
     }
+    #search-box:disabled, #filters select:disabled { opacity: 0.6; cursor: wait; }
     #gurmukhi-preview { margin: 0; min-height: 1.2em; font-size: 1rem; color: var(--accent); font-family: var(--font-gurmukhi); }
     #filters { display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center; }
     #filters select, #filters button {

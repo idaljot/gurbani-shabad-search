@@ -2,3 +2,10 @@ node_modules/
 dist/
 .astro/
 .DS_Store
+
+# Derived from src/data/shabads.json by scripts/build-search-index.mjs
+# (regenerated automatically via the prebuild/predev npm hooks) — same
+# treatment as dist/, not hand-authored source.
+src/data/search-index.json
+public/search-index.json
+public/browse-index.json

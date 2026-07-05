@@ -2,51 +2,49 @@
 import Layout from '../layouts/Layout.astro';
 import searchIndex from '../data/search-index.json';
 
-// Browse has no free-text search, so unlike index.astro it never needs the
-// per-line fl/t matching data — drop `lines` here rather than shipping it.
-const records = searchIndex.map(({ id, source, ang, raag, writer, preview, taal, hasNotation }) => ({
-  id, source, ang, raag, writer, preview, taal, hasNotation,
-}));
-
-const sources = [...new Set(records.map((s) => s.source))].sort();
-const raags = [...new Set(records.map((s) => s.raag))].sort();
-const writers = [...new Set(records.map((s) => s.writer))].sort();
-const taals = [...new Set(records.map((s) => s.taal).filter(Boolean))].sort();
+const sources = [...new Set(searchIndex.map((s) => s.source))].sort();
+const raags = [...new Set(searchIndex.map((s) => s.raag))].sort();
+const writers = [...new Set(searchIndex.map((s) => s.writer))].sort();
+const taals = [...new Set(searchIndex.map((s) => s.taal).filter(Boolean))].sort();
 ---
 <Layout title="Browse All Shabads · Gurbani Kirtan Swar Notation">
   <p class="back"><a href="/">&larr; Back to search</a></p>
   <h1>Browse All Shabads</h1>
-  <p class="subtitle">{records.length} shabads total &mdash; filter to narrow the list</p>
+  <p class="subtitle">{searchIndex.length} shabads total &mdash; filter to narrow the list</p>
 
   <div id="filters">
-    <select id="filter-source" aria-label="Filter by source">
+    <select id="filter-source" aria-label="Filter by source" disabled>
       <option value="">All Sources</option>
       {sources.map((s) => <option value={s}>{s}</option>)}
     </select>
-    <select id="filter-raag" aria-label="Filter by raag">
+    <select id="filter-raag" aria-label="Filter by raag" disabled>
       <option value="">All Raags</option>
       {raags.map((r) => <option value={r}>{r}</option>)}
     </select>
-    <select id="filter-writer" aria-label="Filter by writer">
+    <select id="filter-writer" aria-label="Filter by writer" disabled>
       <option value="">All Writers</option>
       {writers.map((w) => <option value={w}>{w}</option>)}
     </select>
-    <select id="filter-taal" aria-label="Filter by taal">
+    <select id="filter-taal" aria-label="Filter by taal" disabled>
       <option value="">All Taals</option>
       {taals.map((t) => <option value={t}>{t}</option>)}
     </select>
     <button id="clear-filters" type="button">Clear</button>
   </div>
 
-  <p id="result-count"></p>
+  <p id="result-count">Loading shabad list…</p>
   <ul id="results" class="recent-list"></ul>
-
-  <script type="application/json" id="browse-data" set:html={JSON.stringify(records)} />
 
   <script>
     const UNFILTERED_CAP = 200;
 
-    const records = JSON.parse(document.getElementById('browse-data').textContent);
+    // Loaded via fetch() instead of an inlined <script type="application/json">
+    // blob — see index.astro for the full rationale. Filters stay disabled
+    // (see the `disabled` attributes above) and #result-count shows a loading
+    // message until this resolves, so there's never a window where changing
+    // a filter silently does nothing.
+    let records = null;
+
     const filterSource = document.getElementById('filter-source');
     const filterRaag = document.getElementById('filter-raag');
     const filterWriter = document.getElementById('filter-writer');
@@ -56,6 +54,7 @@ const taals = [...new Set(records.map((s) => s.taal).filter(Boolean))].sort();
     const countEl = document.getElementById('result-count');
 
     function render() {
+      if (!records) return;
       const source = filterSource.value;
       const raag = filterRaag.value;
       const writer = filterWriter.value;
@@ -118,8 +117,24 @@ const taals = [...new Set(records.map((s) => s.taal).filter(Boolean))].sort();
       render();
     });
 
+    // Pre-select filters from the URL immediately — this doesn't need the
+    // fetched data, just the (already server-rendered) option lists — so
+    // the dropdowns reflect the URL right away even while still disabled.
     applyFiltersFromUrl();
-    render();
+
+    fetch('/browse-index.json')
+      .then((res) => {
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        return res.json();
+      })
+      .then((data) => {
+        records = data;
+        [filterSource, filterRaag, filterWriter, filterTaal].forEach((el) => { el.disabled = false; });
+        render();
+      })
+      .catch(() => {
+        countEl.textContent = 'Shabad list failed to load — please reload the page.';
+      });
   </script>
 
   <style>
@@ -131,6 +146,7 @@ const taals = [...new Set(records.map((s) => s.taal).filter(Boolean))].sort();
       border-radius: 8px; background: var(--panel); font-size: 0.95rem;
     }
     #filters button { cursor: pointer; color: var(--accent); font-weight: 600; }
+    #filters select:disabled { opacity: 0.6; cursor: wait; }
     #result-count { color: var(--muted); font-size: 0.9rem; margin: 0.25rem 0 1.25rem; min-height: 1.2em; }
     #results { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 0.85rem; }
 

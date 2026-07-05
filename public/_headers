@@ -1,0 +1,10 @@
+# These are fetched client-side after the page shell has already
+# rendered (see index.astro/browse.astro) rather than embedded inline —
+# cache them so navigating between pages, or revisiting, doesn't
+# re-download tens of megabytes every time. Content only changes on a
+# new deploy, so an hour is a reasonable freshness window.
+/search-index.json
+  Cache-Control: public, max-age=3600, must-revalidate
+
+/browse-index.json
+  Cache-Control: public, max-age=3600, must-revalidate
