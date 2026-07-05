@@ -3,10 +3,13 @@
   "type": "module",
   "version": "1.0.0",
   "scripts": {
+    "predev": "npm run build-search-index",
     "dev": "astro dev",
+    "prebuild": "npm run build-search-index",
     "build": "astro build",
     "preview": "astro preview",
-    "fetch-data": "node scripts/fetch-shabads.mjs"
+    "fetch-data": "node scripts/fetch-shabads.mjs",
+    "build-search-index": "node scripts/build-search-index.mjs"
   },
   "dependencies": {
     "astro": "^5.2.0",

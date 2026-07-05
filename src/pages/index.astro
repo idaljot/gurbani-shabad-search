@@ -1,21 +1,8 @@
 ---
 import Layout from '../layouts/Layout.astro';
 import TablaPlayer from '../components/TablaPlayer.astro';
-import shabads from '../data/shabads.json';
+import records from '../data/search-index.json';
 import { RAAGS } from '../data/raags.js';
-
-const records = shabads.map((s) => ({
-  id: s.shabadId,
-  source: s.source || 'Guru Granth Sahib Ji',
-  ang: s.ang,
-  raag: s.raag,
-  writer: s.writer,
-  preview: s.previewLine || s.firstLine || '',
-  lines: s.lines,
-  hasNotation: Boolean(s.sthayi || s.antara || s.taal),
-  taal: s.taal || null,
-  notatedAt: s.notatedAt || null,
-}));
 
 const sources = [...new Set(records.map((s) => s.source))].sort();
 const raags = [...new Set(records.map((s) => s.raag))].sort();
@@ -25,7 +12,7 @@ const notatedCount = records.filter((s) => s.hasNotation).length;
 
 const recentlyNotated = records
   .filter((s) => s.hasNotation && s.notatedAt)
-  .sort((a, b) => new Date(b.notatedAt) - new Date(a.notatedAt))
+  .sort((a, b) => new Date(b.notatedAt || 0) - new Date(a.notatedAt || 0))
   .slice(0, 3);
 
 // Only real raags (RAAGS keys, curated to exclude structural labels like
@@ -38,6 +25,13 @@ const browsableRaags = Object.keys(RAAGS)
   .filter((name) => raagCounts.has(name))
   .map((name) => ({ name, count: raagCounts.get(name) }))
   .sort((a, b) => a.name.localeCompare(b.name));
+
+// The client-side search only reads these fields — `ang` and `notatedAt`
+// are only needed for the build-time sections above (Recently Notated),
+// so they're dropped here to keep the embedded payload minimal.
+const clientRecords = records.map(({ id, source, raag, writer, preview, taal, hasNotation, lines }) => ({
+  id, source, raag, writer, preview, taal, hasNotation, lines,
+}));
 ---
 <Layout title="Gurbani Kirtan Swar Notation">
   <h1>Gurbani Kirtan Swar Notation</h1>
@@ -134,7 +128,7 @@ const browsableRaags = Object.keys(RAAGS)
 
   <TablaPlayer id="floating-tabla" variant="floating" />
 
-  <script type="application/json" id="shabad-data" set:html={JSON.stringify(records)} />
+  <script type="application/json" id="shabad-data" set:html={JSON.stringify(clientRecords)} />
 
   <script>
     const KEYMAP = {
