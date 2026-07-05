@@ -60,19 +60,19 @@ const clientRecords = records.map(({ id, source, raag, writer, preview, taal, ha
       </div>
     </div>
     <div id="filters">
-      <select id="filter-source">
+      <select id="filter-source" aria-label="Filter by source">
         <option value="">All Sources</option>
         {sources.map((s) => <option value={s}>{s}</option>)}
       </select>
-      <select id="filter-raag">
+      <select id="filter-raag" aria-label="Filter by raag">
         <option value="">All Raags</option>
         {raags.map((r) => <option value={r}>{r}</option>)}
       </select>
-      <select id="filter-writer">
+      <select id="filter-writer" aria-label="Filter by writer">
         <option value="">All Writers</option>
         {writers.map((w) => <option value={w}>{w}</option>)}
       </select>
-      <select id="filter-taal">
+      <select id="filter-taal" aria-label="Filter by taal">
         <option value="">All Taals</option>
         {taals.map((t) => <option value={t}>{t}</option>)}
       </select>

@@ -1,6 +1,9 @@
 ---
 import { RESOURCE_PLAYLISTS } from '../data/raags.js';
-const { title = 'Gurbani Kirtan Swar Notation' } = Astro.props;
+const {
+  title = 'Gurbani Kirtan Swar Notation',
+  description = 'Search Gurbani shabads by typing the first letters of each word, browse by raag or writer, and view sur/taal notation for kirtan.',
+} = Astro.props;
 ---
 <!doctype html>
 <html lang="en">
@@ -8,6 +11,7 @@ const { title = 'Gurbani Kirtan Swar Notation' } = Astro.props;
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>{title}</title>
+    <meta name="description" content={description} />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link

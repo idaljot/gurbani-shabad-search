@@ -25,11 +25,11 @@ const taals = [...new Set(records.map((s) => s.taal).filter(Boolean))].sort();
   <p class="subtitle">{records.length} shabads with sur &amp; taal notation</p>
 
   <div id="filters">
-    <select id="filter-raag">
+    <select id="filter-raag" aria-label="Filter by raag">
       <option value="">All Raags</option>
       {raags.map((r) => <option value={r}>{r}</option>)}
     </select>
-    <select id="filter-taal">
+    <select id="filter-taal" aria-label="Filter by taal">
       <option value="">All Taals</option>
       {taals.map((t) => <option value={t}>{t}</option>)}
     </select>
