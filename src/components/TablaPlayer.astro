@@ -11,6 +11,18 @@ const {
 const taalNames = Object.keys(TAALS);
 const selectDefault = presetTaal && TAALS[presetTaal] ? presetTaal : DEFAULT_TAAL;
 const isFloating = variant === 'floating';
+
+// The embedded variant (shabad detail pages) renders this widget fully
+// expanded and visible from the very first paint — unlike the floating
+// homepage widget, which starts collapsed. The client script populates
+// the beat row / beat count / tempo value via JS on load, which on an
+// embedded player was a real, visible empty-to-populated layout shift
+// (Lighthouse flagged div.panels.two on detail pages for exactly this).
+// Pre-rendering the same markup server-side, from the same preset taal
+// the client script would use, means the client's initial setTaal/setTempo
+// calls just replace it with identical content — no reflow.
+const initialTaal = TAALS[selectDefault];
+const initialTempo = presetTempo || initialTaal.defaultTempo;
 ---
 
 <div
@@ -47,10 +59,11 @@ const isFloating = variant === 'floating';
           min="40"
           max="200"
           step="1"
+          value={initialTempo}
           data-role="tempo-range"
           aria-label="Tempo (BPM)"
         />
-        <span data-role="tempo-value"></span> BPM
+        <span data-role="tempo-value">{initialTempo}</span> BPM
       </label>
       <label class="tabla-bell-toggle">
         <input type="checkbox" data-role="bell-toggle" /> Bell on beat 1
@@ -62,8 +75,14 @@ const isFloating = variant === 'floating';
       <button type="button" class="tabla-fs-close" data-role="fullscreen-close" aria-label="Exit fullscreen">&times;</button>
       <p class="tabla-taal-name" data-role="fs-taal-name"></p>
       <p class="tabla-current-beat" data-role="current-beat" aria-label="Current beat">1</p>
-      <p class="tabla-beat-count" data-role="beat-count"></p>
-      <div class="tabla-beats" data-role="beats"></div>
+      <p class="tabla-beat-count" data-role="beat-count">{initialTaal.beats.length} beat{initialTaal.beats.length === 1 ? '' : 's'}</p>
+      <div class="tabla-beats" data-role="beats">
+        {initialTaal.beats.map((bol, i) => (
+          <div class={`bol${i === 0 ? ' sam' : ''}`} data-index={i}>
+            <span class="dot"></span><span>{bol}</span>
+          </div>
+        ))}
+      </div>
       <div class="tabla-fs-controls" data-role="fs-controls">
         <button type="button" class="tabla-play" data-role="fs-play" aria-label="Play taal">&#9654;</button>
         <select class="tabla-select" data-role="fs-taal-select" aria-label="Taal">
@@ -77,10 +96,11 @@ const isFloating = variant === 'floating';
             min="40"
             max="200"
             step="1"
+            value={initialTempo}
             data-role="fs-tempo-range"
             aria-label="Tempo (BPM)"
           />
-          <span data-role="fs-tempo-value"></span> BPM
+          <span data-role="fs-tempo-value">{initialTempo}</span> BPM
         </label>
         <label class="tabla-bell-toggle">
           <input type="checkbox" data-role="fs-bell-toggle" /> Bell on beat 1
