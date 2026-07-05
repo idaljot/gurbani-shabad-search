@@ -11,7 +11,17 @@ const { title = 'Gurbani Kirtan Swar Notation' } = Astro.props;
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
-      href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600&family=DM+Sans:wght@400;500;600&family=Noto+Sans+Gurmukhi:wght@400;500;600&display=swap"
+      href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600&family=DM+Sans:wght@400;500;600&display=swap"
+      rel="stylesheet"
+    />
+    <!-- Loaded separately with display=optional: Gurmukhi glyphs have very
+         different vertical metrics than their Latin fallback, so swapping
+         this font in after layout (display=swap) reflows every shabad line
+         on the page and was a major source of the CLS Lighthouse flagged.
+         `optional` uses the fallback for this render if the font isn't
+         ready almost immediately, avoiding the late reflow entirely. -->
+    <link
+      href="https://fonts.googleapis.com/css2?family=Noto+Sans+Gurmukhi:wght@400;500;600&display=optional"
       rel="stylesheet"
     />
     <script src="https://cdn.jsdelivr.net/npm/tone@14.8.49/build/Tone.js"></script>
