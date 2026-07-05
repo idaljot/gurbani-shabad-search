@@ -15,18 +15,20 @@ const {
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <!-- One combined request (matches how these were originally loaded) with
+         display=optional for all three families. Gurmukhi glyphs in
+         particular have very different vertical/horizontal metrics than
+         their Latin fallback, so swapping the font in after layout
+         (display=swap) reflows every shabad line on shabad detail pages —
+         confirmed as the CLS Lighthouse flagged there. An earlier attempt
+         split Gurmukhi into its own request with display=optional and left
+         swap on the other two; that made detail-page CLS worse (two
+         separately-timed font loads instead of one), so this uses one
+         request and applies `optional` uniformly instead. `optional` uses
+         the fallback for the whole render if the font isn't ready almost
+         immediately, avoiding a later reflow entirely. -->
     <link
-      href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600&family=DM+Sans:wght@400;500;600&display=swap"
-      rel="stylesheet"
-    />
-    <!-- Loaded separately with display=optional: Gurmukhi glyphs have very
-         different vertical metrics than their Latin fallback, so swapping
-         this font in after layout (display=swap) reflows every shabad line
-         on the page and was a major source of the CLS Lighthouse flagged.
-         `optional` uses the fallback for this render if the font isn't
-         ready almost immediately, avoiding the late reflow entirely. -->
-    <link
-      href="https://fonts.googleapis.com/css2?family=Noto+Sans+Gurmukhi:wght@400;500;600&display=optional"
+      href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600&family=DM+Sans:wght@400;500;600&family=Noto+Sans+Gurmukhi:wght@400;500;600&display=optional"
       rel="stylesheet"
     />
     <script src="https://cdn.jsdelivr.net/npm/tone@14.8.49/build/Tone.js"></script>
@@ -92,6 +94,7 @@ const {
       .footer-copyright .cc-badge {
         height: 16px;
         width: auto;
+        aspect-ratio: 88 / 31;
         vertical-align: middle;
       }
     </style>
