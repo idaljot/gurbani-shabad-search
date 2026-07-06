@@ -212,7 +212,7 @@ const browsableRaags = Object.keys(RAAGS)
 
       function findMatchedLine(s) {
         if (!s.lines) return null;
-        return s.lines.find((l) => (l.fl || '').replace(/\s+/g, '').includes(query));
+        return s.lines.find((l) => (l.fl || '').replace(/\s+/g, '').startsWith(query));
       }
 
       const matches = [];
