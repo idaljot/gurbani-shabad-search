@@ -123,8 +123,10 @@ function parseCSV(text) {
 }
 
 /**
- * Fetches the notation sheet and returns a map: shabadId -> {taal, tempo, sthayi, antara}.
- * Matches columns by header NAME (not position), so reordering form fields won't break it.
+ * Fetches the notation sheet and returns a map:
+ * shabadId -> {taal, tempo, key, sthayi, antara, alaap}.
+ * Matches columns by header NAME (not position), so reordering form fields
+ * (or adding new ones, like Key/Alaap) won't break it.
  * If the sheet can't be reached, returns null so the caller can fall back to existing data.
  */
 async function fetchNotation() {
@@ -148,6 +150,8 @@ async function fetchNotation() {
   const antaraCol = col('antara');
   const taalCol = col('taal');
   const tempoCol = col('tempo');
+  const keyCol = col('key');
+  const alaapCol = col('alaap');
   const timestampCol = col('timestamp');
 
   if (idCol === -1) {
@@ -166,6 +170,8 @@ async function fetchNotation() {
       antara: antaraCol !== -1 ? (row[antaraCol] || '') : '',
       taal: taalCol !== -1 ? (row[taalCol] || '').trim() : '',
       tempo: tempoCol !== -1 ? (row[tempoCol] || '').trim() : '',
+      key: keyCol !== -1 ? (row[keyCol] || '').trim() : '',
+      alaap: alaapCol !== -1 ? (row[alaapCol] || '') : '',
       notatedAt: parseTimestamp(timestampCol !== -1 ? row[timestampCol] : null),
     };
   }
@@ -217,8 +223,10 @@ async function main() {
               lineTypes: [],
               taal: null,
               tempo: null,
+              key: null,
               sthayi: null,
               antara: null,
+              alaap: null,
               notatedAt: null,
             });
           }
@@ -273,11 +281,13 @@ async function main() {
       const prevMap = new Map(prev.map((s) => [s.shabadId, s]));
       for (const shabad of shabadMap.values()) {
         const old = prevMap.get(shabad.shabadId);
-        if (old && (old.sthayi || old.antara || old.taal)) {
+        if (old && (old.sthayi || old.antara || old.taal || old.key || old.alaap)) {
           shabad.sthayi = old.sthayi;
           shabad.antara = old.antara;
           shabad.taal = old.taal;
           shabad.tempo = old.tempo;
+          shabad.key = old.key || null;
+          shabad.alaap = old.alaap || null;
           shabad.notatedAt = old.notatedAt || null;
           notationCount++;
         }
@@ -288,11 +298,13 @@ async function main() {
   } else {
     for (const shabad of shabadMap.values()) {
       const n = notation[shabad.shabadId];
-      if (n && (n.sthayi || n.antara || n.taal)) {
+      if (n && (n.sthayi || n.antara || n.taal || n.key || n.alaap)) {
         shabad.sthayi = n.sthayi || null;
         shabad.antara = n.antara || null;
         shabad.taal = n.taal || null;
         shabad.tempo = n.tempo || null;
+        shabad.key = n.key || null;
+        shabad.alaap = n.alaap || null;
         shabad.notatedAt = n.notatedAt || null;
         notationCount++;
       }
