@@ -8,7 +8,10 @@
     "prebuild": "npm run build-search-index",
     "build": "astro build",
     "preview": "astro preview",
-    "fetch-data": "node scripts/fetch-shabads.mjs",
+    "fetch-base": "node scripts/fetch-base.mjs",
+    "fetch-notation": "node scripts/fetch-notation.mjs",
+    "fetch-data": "npm run fetch-base && npm run fetch-notation",
+    "publish-notation": "node scripts/publish-notation.mjs",
     "build-search-index": "node scripts/build-search-index.mjs"
   },
   "dependencies": {
