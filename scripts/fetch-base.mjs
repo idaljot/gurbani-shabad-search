@@ -124,48 +124,72 @@ async function main() {
     console.log(`\nFetching ${source.angs} Angs of ${source.name} (${sourceLabel}), concurrency ${CONCURRENCY}...`);
 
     const pages = Array.from({ length: source.angs }, (_, i) => i + 1);
+
+    // Fetch concurrently for speed, but DON'T merge each Ang's lines into
+    // shabadMap as soon as its fetch resolves — parallel requests complete
+    // in nondeterministic order, and a shabad whose lines span an Ang
+    // boundary (e.g. shabad EWS, whose first 5 lines are on Ang 2 and whose
+    // final line is the first line of Ang 3) would get assembled out of
+    // order depending purely on network timing. Two runs of an identical
+    // crawl disagreed on ~800 shabads for exactly this reason.
+    //
+    // Instead, stash each Ang's already-extracted lines indexed by page
+    // number, then merge them into shabadMap in a second pass, strictly in
+    // ascending Ang order (below) — regardless of which fetch actually
+    // finished first. Within a single Ang's response the API's own array
+    // order is the reading order and is stable across repeated fetches
+    // (verified directly against the live API); a per-line `lineno` field
+    // exists but ties across sub-tuks of the same printed line, so it can't
+    // serve as a full sort key on its own — ascending-Ang merge order
+    // combined with each Ang's already-correct internal order is what
+    // actually makes the assembly deterministic.
+    const pageResults = new Array(pages.length);
     let done = 0;
     await withConcurrency(pages, CONCURRENCY, async (pageNum) => {
       try {
         const raw = await fetchAng(pageNum, source);
-        const lines = extractLines(raw, pageNum);
-        for (const l of lines) {
-          if (!l.shabadId) continue;
-          const existing = shabadMap.get(l.shabadId);
-          if (existing && existing.source !== source.name) {
-            // Shabad IDs were sampled and found unique across sources, but the
-            // full crawl covers many more angs than that sample — guard against
-            // silently merging two different shabads from different sources.
-            collisions++;
-            console.warn(
-              `\nWARNING: shabad ID ${l.shabadId} appears in both "${existing.source}" and "${source.name}" — skipping the second occurrence to avoid corrupting data.`
-            );
-            continue;
-          }
-          if (!existing) {
-            shabadMap.set(l.shabadId, {
-              shabadId: l.shabadId,
-              source: source.name,
-              ang: l.ang,
-              raag: l.raag,
-              writer: l.writer,
-              textLines: [],
-              lineTypes: [],
-            });
-          }
-          // Append every line's text (full shabad, in order), alongside its
-          // API `type` so rahaao (type 3) can be identified later.
-          const entry = shabadMap.get(l.shabadId);
-          entry.textLines.push(l.gurmukhi);
-          entry.lineTypes.push(l.type);
-        }
+        pageResults[pageNum - 1] = extractLines(raw, pageNum);
       } catch (err) {
         console.error(`Skipping ${source.name} Ang ${pageNum}: ${err.message}`);
+        pageResults[pageNum - 1] = [];
       } finally {
         done++;
         if (done % 100 === 0) console.log(`  ...${done}/${source.angs} Angs processed`);
       }
     });
+
+    for (const lines of pageResults) {
+      for (const l of lines) {
+        if (!l.shabadId) continue;
+        const existing = shabadMap.get(l.shabadId);
+        if (existing && existing.source !== source.name) {
+          // Shabad IDs were sampled and found unique across sources, but the
+          // full crawl covers many more angs than that sample — guard against
+          // silently merging two different shabads from different sources.
+          collisions++;
+          console.warn(
+            `\nWARNING: shabad ID ${l.shabadId} appears in both "${existing.source}" and "${source.name}" — skipping the second occurrence to avoid corrupting data.`
+          );
+          continue;
+        }
+        if (!existing) {
+          shabadMap.set(l.shabadId, {
+            shabadId: l.shabadId,
+            source: source.name,
+            ang: l.ang,
+            raag: l.raag,
+            writer: l.writer,
+            textLines: [],
+            lineTypes: [],
+          });
+        }
+        // Append every line's text (full shabad, in order), alongside its
+        // API `type` so rahaao (type 3) can be identified later.
+        const entry = shabadMap.get(l.shabadId);
+        entry.textLines.push(l.gurmukhi);
+        entry.lineTypes.push(l.type);
+      }
+    }
   }
 
   if (collisions > 0) {
