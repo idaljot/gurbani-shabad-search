@@ -1,8 +1,9 @@
 ---
 import Layout from '../layouts/Layout.astro';
 import searchIndex from '../data/search-index.json';
+import { bySourceOrder } from '../data/sources.js';
 
-const sources = [...new Set(searchIndex.map((s) => s.source))].sort();
+const sources = [...new Set(searchIndex.map((s) => s.source))].sort(bySourceOrder);
 const raags = [...new Set(searchIndex.map((s) => s.raag))].sort();
 const writers = [...new Set(searchIndex.map((s) => s.writer))].sort();
 const taals = [...new Set(searchIndex.map((s) => s.taal).filter(Boolean))].sort();

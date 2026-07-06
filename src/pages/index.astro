@@ -3,8 +3,9 @@ import Layout from '../layouts/Layout.astro';
 import TablaPlayer from '../components/TablaPlayer.astro';
 import records from '../data/search-index.json';
 import { RAAGS } from '../data/raags.js';
+import { bySourceOrder } from '../data/sources.js';
 
-const sources = [...new Set(records.map((s) => s.source))].sort();
+const sources = [...new Set(records.map((s) => s.source))].sort(bySourceOrder);
 const raags = [...new Set(records.map((s) => s.raag))].sort();
 const writers = [...new Set(records.map((s) => s.writer))].sort();
 const taals = [...new Set(records.map((s) => s.taal).filter(Boolean))].sort();
