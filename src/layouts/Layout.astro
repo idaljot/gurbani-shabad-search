@@ -31,15 +31,17 @@ const {
       href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600&family=DM+Sans:wght@400;500;600&family=Noto+Sans+Gurmukhi:wght@400;500;600&display=optional"
       rel="stylesheet"
     />
-    <!-- defer: this is a 349KB synchronous script that was blocking HTML
-         parsing (and first paint) on every page, even though the tabla
-         player it powers isn't needed until the user interacts with it.
-         `defer` lets it download in parallel without blocking rendering,
-         while still guaranteeing it runs (in document order, before
-         TablaPlayer's own module script further down the page) before the
-         page is considered "loaded" — so window.Tone is available by the
-         time TablaPlayer's init code runs, same as before. -->
-    <script src="https://cdn.jsdelivr.net/npm/tone@14.8.49/build/Tone.js" defer></script>
+    <!-- Self-hosted (Tone.js 14.8.49; was loaded from a CDN) — see
+         public/vendor/tone.js.LICENSE.txt for the MIT license header that
+         ships alongside it. defer: this is a 349KB synchronous script
+         that was blocking HTML parsing (and first paint) on every page,
+         even though the tabla player it powers isn't needed until the user
+         interacts with it. `defer` lets it download in parallel without
+         blocking rendering, while still guaranteeing it runs (in document
+         order, before TablaPlayer's own module script further down the
+         page) before the page is considered "loaded" — so window.Tone is
+         available by the time TablaPlayer's init code runs, same as before. -->
+    <script src="/vendor/tone.js" defer></script>
     <style>
       :root {
         --bg: #fbf7f0;
