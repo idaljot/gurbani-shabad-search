@@ -19,14 +19,27 @@ const CONCURRENCY = 8;
 const OUT_FILE = path.join('src', 'data', 'shabads.json');
 
 // Ang counts confirmed via each source's `source.length` field
-// (curl https://api.gurbaninow.com/v2/ang/1/<code>). Different sources have
-// different lengths — do not assume 1430 for all of them.
+// (curl https://api.gurbaninow.com/v2/ang/1/<code>, or for sourceId-based
+// entries below, curl "https://api.gurbaninow.com/v2/ang/1?source=<id>").
+// Different sources have different lengths — do not assume 1430 for all of them.
 const SOURCES = [
   { code: 'G', name: 'Guru Granth Sahib Ji', angs: 1430 },
   { code: 'D', name: 'Sri Dasam Granth', angs: 1428 },
   { code: 'B', name: 'Vaaran Bhai Gurdas Ji', angs: 41 },
+  // Bhai Nand Lal Ji has no single composition in the API and no letter
+  // `code` — each of his four works is its own numeric source id, reachable
+  // only via /v2/ang/<page>?source=<id> (confirmed by probing ids 1-30).
+  // There's no "Vaaran" among them (that's Bhai Gurdas Ji's genre, above);
+  // all four are pulled and merged under one shared `name` so the site's
+  // Source filter shows a single "Bhai Nand Lal Ji" option rather than four.
+  // Ang numbers restart at 1 within each underlying composition, so they
+  // aren't globally unique across this merged source — an accepted nuance
+  // of combining four distinct works under one filter, per request.
+  { sourceId: 5, name: 'Bhai Nand Lal Ji', angs: 65 }, // Ghazals (Diwan-e-Goya)
+  { sourceId: 6, name: 'Bhai Nand Lal Ji', angs: 1 }, // Zindagi Nama
+  { sourceId: 7, name: 'Bhai Nand Lal Ji', angs: 10 }, // Ganj Nama
+  { sourceId: 8, name: 'Bhai Nand Lal Ji', angs: 2 }, // Jot Bigas
   // Easy to add later — confirm each source's ang count first:
-  // { code: 'N', name: 'Bhai Nand Lal Ji', angs: 0 },
   // { code: 'A', name: 'Amrit Keertan', angs: 0 },
   // { code: 'U', name: 'Uggardanti', angs: 0 },
 ];
@@ -37,8 +50,14 @@ const SOURCES = [
 const SHEET_CSV_URL =
   'https://docs.google.com/spreadsheets/d/e/2PACX-1vTOoQ5b4OoX5FDij7GProOjg5j-HeD_C76ryLQpYldkZRYeO4xnUdn_D7kAm4mVGyMrbQwiOqFsOCo_/pub?output=csv';
 
-async function fetchAng(pageNum, sourceCode) {
-  const res = await fetch(`${API_BASE}/ang/${pageNum}/${sourceCode}`);
+async function fetchAng(pageNum, source) {
+  // Most sources have a short letter `code` usable as a path segment; a few
+  // (the four Bhai Nand Lal Ji works) only have a numeric source id, which
+  // the API takes as a query param instead — confirmed by probing directly.
+  const url = source.code
+    ? `${API_BASE}/ang/${pageNum}/${source.code}`
+    : `${API_BASE}/ang/${pageNum}?source=${source.sourceId}`;
+  const res = await fetch(url);
   if (!res.ok) throw new Error(`Ang ${pageNum} failed: HTTP ${res.status}`);
   return res.json();
 }
@@ -193,13 +212,14 @@ async function main() {
   let collisions = 0;
 
   for (const source of SOURCES) {
-    console.log(`\nFetching ${source.angs} Angs of ${source.name} (${source.code}), concurrency ${CONCURRENCY}...`);
+    const sourceLabel = source.code || `source=${source.sourceId}`;
+    console.log(`\nFetching ${source.angs} Angs of ${source.name} (${sourceLabel}), concurrency ${CONCURRENCY}...`);
 
     const pages = Array.from({ length: source.angs }, (_, i) => i + 1);
     let done = 0;
     await withConcurrency(pages, CONCURRENCY, async (pageNum) => {
       try {
-        const raw = await fetchAng(pageNum, source.code);
+        const raw = await fetchAng(pageNum, source);
         const lines = extractLines(raw, pageNum);
         for (const l of lines) {
           if (!l.shabadId) continue;
