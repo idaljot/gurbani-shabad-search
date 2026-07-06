@@ -32,8 +32,10 @@ const SOURCES = [
 ];
 
 // Your published Google Sheet (Form responses), CSV format.
+// The original sheet got corrupted; the form was remapped to a new sheet on
+// 2026-07-06 — this URL points at that replacement.
 const SHEET_CSV_URL =
-  'https://docs.google.com/spreadsheets/d/e/2PACX-1vSUXqLcvoPkqgjSZVF5loJYuOHIwuJ_pS8sOZisOWydQCLXTL1kG2r3t4hiTQIpIloGGUAH4b_-srgH/pub?output=csv';
+  'https://docs.google.com/spreadsheets/d/e/2PACX-1vTOoQ5b4OoX5FDij7GProOjg5j-HeD_C76ryLQpYldkZRYeO4xnUdn_D7kAm4mVGyMrbQwiOqFsOCo_/pub?output=csv';
 
 async function fetchAng(pageNum, sourceCode) {
   const res = await fetch(`${API_BASE}/ang/${pageNum}/${sourceCode}`);
