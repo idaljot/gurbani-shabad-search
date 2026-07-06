@@ -1,5 +1,31 @@
 # Credits
 
+## Self-hosted third-party assets
+
+These used to be loaded at runtime from third-party CDNs (jsdelivr, Google
+Fonts, licensebuttons.net); they're now bundled in this repo under `public/`
+so the site has no runtime third-party dependencies. Versions/files noted
+here so they can be verified or updated later.
+
+- **`public/vendor/tone.js`** — [Tone.js](https://tonejs.github.io/) 14.8.49,
+  the Web Audio framework powering the tabla player. **MIT License** —
+  copyright 2014-2019 Yotam Mann; full header in
+  `public/vendor/tone.js.LICENSE.txt`.
+- **`public/fonts/dm-sans-latin.woff2`** — [DM Sans](https://fonts.google.com/specimen/DM+Sans)
+  (Colophon Foundry), variable font, latin subset only. **SIL Open Font
+  License 1.1.**
+- **`public/fonts/fraunces-latin.woff2`** — [Fraunces](https://fonts.google.com/specimen/Fraunces)
+  (Untype), variable font, latin subset only. **SIL Open Font License 1.1.**
+- **`public/fonts/noto-sans-gurmukhi.woff2`** — [Noto Sans Gurmukhi](https://fonts.google.com/noto/specimen/Noto+Sans+Gurmukhi)
+  (Google Noto project), variable font, gurmukhi subset only (this family is
+  only ever used for actual Gurmukhi script on this site, never Latin text).
+  **SIL Open Font License 1.1.**
+- **`public/cc-by-nc.png`** — the CC BY-NC 4.0 badge from
+  [licensebuttons.net](https://creativecommons.org/about/downloads/), used
+  here to mark the license of this site's own sur/taal notation and
+  compilation (see the footer) — the badge image itself is provided by
+  Creative Commons for exactly this kind of use.
+
 ## Tabla player audio
 
 `public/tabla/dha.wav`, `dhin.wav`, `ge.wav`, `ke.wav`, `na.wav`, `ta.wav`, `tin.wav`
