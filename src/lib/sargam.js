@@ -16,32 +16,37 @@
 //
 // octave: 0 = madhya, -1 mandra, -2 ati-mandra, +1 tar, +2 ati-tar.
 
-const SWARA = {
-  S: { note: 'Sa',  variant: 'shuddh' },
-  r: { note: 'Re',  variant: 'komal'  },
-  R: { note: 'Re',  variant: 'shuddh' },
-  g: { note: 'Ga',  variant: 'komal'  },
-  G: { note: 'Ga',  variant: 'shuddh' },
-  // --- CONTESTED: there is no industry standard for Ma. This spec uses the "pitch-height"
-  // convention (majority usage): m = shuddh Ma, M = teevra Ma. To use the Parrikar /
-  // "shuddha-set" convention instead (M = shuddh, m = teevra), swap the two variants below.
-  // Nothing else in the file depends on this choice.
-  m: { note: 'Ma',  variant: 'shuddh' },   // pitch-height convention (default)
-  M: { note: 'Ma',  variant: 'teevra' },
-  P: { note: 'Pa',  variant: 'shuddh' },
-  d: { note: 'Dha', variant: 'komal'  },
-  D: { note: 'Dha', variant: 'shuddh' },
-  n: { note: 'Ni',  variant: 'komal'  },
-  N: { note: 'Ni',  variant: 'shuddh' },
-};
+// The Ma convention is a parse-time parameter, not a hardcoded constant: there is no
+// industry standard (see SARGAM.md §1), and a viewer may want to compare both readings
+// of the exact same stored line against a raga they know. 'pitch-height' (m=shuddh,
+// M=teevra) is the canonical storage convention and the default; 'shuddha-set' (Rajan
+// Parrikar's — M=shuddh, m=teevra) is offered as an alternate *display* reading only.
+function buildSwaraTable(maConvention) {
+  const flip = maConvention === 'shuddha-set';
+  return {
+    S: { note: 'Sa',  variant: 'shuddh' },
+    r: { note: 'Re',  variant: 'komal'  },
+    R: { note: 'Re',  variant: 'shuddh' },
+    g: { note: 'Ga',  variant: 'komal'  },
+    G: { note: 'Ga',  variant: 'shuddh' },
+    m: { note: 'Ma',  variant: flip ? 'teevra' : 'shuddh' },
+    M: { note: 'Ma',  variant: flip ? 'shuddh' : 'teevra' },
+    P: { note: 'Pa',  variant: 'shuddh' },
+    d: { note: 'Dha', variant: 'komal'  },
+    D: { note: 'Dha', variant: 'shuddh' },
+    n: { note: 'Ni',  variant: 'komal'  },
+    N: { note: 'Ni',  variant: 'shuddh' },
+  };
+}
+const SWARA = buildSwaraTable('pitch-height');
 
-export function parseSwara(tok) {
+export function parseSwara(tok, table = SWARA) {
   const m = tok.match(/^(\.{0,2})([SrRgGmMPdDnN])(\.{0,2})$/);
   if (!m) throw new Error(`Invalid swara token: "${tok}"`);
   const [, lead, letter, trail] = m;
   if (lead && trail) throw new Error(`"${tok}" cannot be both mandra and tar`);
   const octave = trail.length - lead.length; // -2..+2
-  const base = SWARA[letter];
+  const base = table[letter];
   return { type: 'note', note: base.note, variant: base.variant, octave, raw: tok };
 }
 
@@ -81,7 +86,12 @@ function tokenize(src) {
   return tokens;
 }
 
-export function parse(src) {
+// `maConvention` only affects how Ma is *read* (see buildSwaraTable above); it does not
+// change what's stored. stringify() always emits the canonical pitch-height letters, so
+// round-tripping parse(src, {maConvention:'shuddha-set'}) through stringify() will NOT
+// reproduce `src` — that alternate reading is display-only, never re-serialized.
+export function parse(src, { maConvention = 'pitch-height' } = {}) {
+  const table = maConvention === 'pitch-height' ? SWARA : buildSwaraTable(maConvention);
   const events = [];
   for (const tok of tokenize(src)) {
     if (tok === '|') { events.push({ type: 'section' }); continue; }
@@ -91,11 +101,11 @@ export function parse(src) {
     if (tok.startsWith('(')) {
       const inner = tok.slice(1, -1).trim().split(/\s+/).filter(Boolean);
       if (inner.length < 2) throw new Error(`Beat-group "${tok}" needs 2+ swaras`);
-      events.push({ type: 'group', swaras: inner.map(parseSwara), raw: tok });
+      events.push({ type: 'group', swaras: inner.map((s) => parseSwara(s, table)), raw: tok });
       continue;
     }
     if (isLabelToken(tok)) { events.push({ type: 'label', text: tok }); continue; }
-    events.push(parseSwara(tok));
+    events.push(parseSwara(tok, table));
   }
   return events;
 }
@@ -161,6 +171,12 @@ if (typeof process !== 'undefined' && process.argv?.[1]?.endsWith('sargam.js')) 
   threw = false;
   try { parse('Sx'); } catch { threw = true; }
   assert(threw, '"Sx" (letter + garbage) is not a label — still a parse error');
+
+  const pitchHeight = parse('m M')[0];
+  const shuddhaSet = parse('m M', { maConvention: 'shuddha-set' })[0];
+  assert(pitchHeight.variant === 'shuddh', 'pitch-height (default): m is shuddh Ma');
+  assert(shuddhaSet.variant === 'teevra', 'shuddha-set: m is teevra Ma');
+  assert(parse('m')[0].note === 'Ma' && parse('m', { maConvention: 'shuddha-set' })[0].note === 'Ma', 'note identity unchanged across conventions');
 
   if (!process.exitCode) console.log('All SARGAM parser tests passed.');
 }

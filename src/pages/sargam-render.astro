@@ -1,0 +1,367 @@
+---
+// Standalone reference/demo page for the SARGAM notation renderer (see SARGAM.md).
+// Parsing comes from ../lib/sargam.js and rendering from ../lib/sargam-render.js — this
+// page owns no notation logic of its own, only the aligned-grid layout and taal strip.
+---
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sur Lekh — one notation, three hands</title>
+<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;0,700;1,500&family=Spline+Sans:wght@400;500;600&family=Spline+Sans+Mono:wght@400;500;600&family=Noto+Serif+Gurmukhi:wght@400;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#241a10;          /* manuscript ink */
+    --ink-soft:#6b5b47;
+    --parch:#efe5d0;        /* parchment leaf */
+    --parch-edge:#e3d4b6;
+    --night:#171a2e;        /* evening-raga ground */
+    --night-2:#1f2340;
+    --bone:#e9e2d2;         /* text on night */
+    --bone-dim:#a49f92;
+    --brass:#d9a441;        /* harmonium brass / kesari */
+    --brass-deep:#b5771f;
+    --peacock:#2f7d74;
+    --rule:rgba(233,226,210,.14);
+    --leaf-shadow:0 18px 40px -20px rgba(0,0,0,.65);
+  }
+  *{box-sizing:border-box}
+  html{-webkit-text-size-adjust:100%}
+  body{
+    margin:0;color:var(--bone);
+    background:
+      radial-gradient(120% 80% at 82% -10%, #262a4d 0%, rgba(38,42,77,0) 55%),
+      radial-gradient(90% 70% at 0% 110%, #241b33 0%, rgba(36,27,51,0) 60%),
+      var(--night);
+    font-family:"Spline Sans",system-ui,sans-serif;
+    line-height:1.55;letter-spacing:.005em;
+    min-height:100vh;
+  }
+  .wrap{max-width:1040px;margin:0 auto;padding:clamp(1.4rem,4vw,3.2rem) clamp(1.1rem,4vw,2.2rem) 4rem}
+
+  header{margin-bottom:2.2rem}
+  .eyebrow{
+    font-size:.72rem;letter-spacing:.34em;text-transform:uppercase;
+    color:var(--brass);font-weight:600;margin:0 0 .7rem
+  }
+  h1{
+    font-family:"Cormorant Garamond",serif;font-weight:600;
+    font-size:clamp(2.3rem,6vw,3.6rem);line-height:1.02;margin:0 0 .5rem;
+    color:#f3ecdb;letter-spacing:.01em
+  }
+  h1 .gur{font-family:"Noto Serif Gurmukhi",serif;font-weight:400;color:var(--brass);font-size:.82em}
+  .lede{max-width:56ch;color:var(--bone-dim);font-size:1.02rem;margin:.2rem 0 0}
+  .lede em{color:var(--bone);font-style:normal;border-bottom:1px solid var(--brass-deep)}
+
+  /* ---- console ---- */
+  .console{
+    margin:2.2rem 0 1.6rem;padding:1.15rem 1.15rem 1.25rem;
+    background:linear-gradient(180deg,rgba(255,255,255,.035),rgba(255,255,255,.012));
+    border:1px solid var(--rule);border-radius:14px;
+  }
+  .field-label{font-size:.7rem;letter-spacing:.2em;text-transform:uppercase;color:var(--bone-dim);margin-bottom:.5rem;display:block}
+  textarea{
+    width:100%;resize:vertical;min-height:3.1rem;
+    font-family:"Spline Sans Mono",ui-monospace,monospace;font-size:1.05rem;
+    color:#fbf4e2;background:#12142a;border:1px solid var(--rule);border-radius:9px;
+    padding:.7rem .8rem;letter-spacing:.02em;line-height:1.5;
+  }
+  textarea:focus-visible{outline:2px solid var(--brass);outline-offset:1px;border-color:transparent}
+  .row{display:flex;flex-wrap:wrap;gap:1.4rem;align-items:flex-end;margin-top:1rem}
+  .ctrl{display:flex;flex-direction:column;gap:.45rem}
+  .chips{display:flex;flex-wrap:wrap;gap:.4rem}
+  .chip,.seg button,select{font-family:inherit}
+  .chip{
+    cursor:pointer;font-size:.82rem;color:var(--bone);
+    background:transparent;border:1px solid var(--rule);border-radius:100px;
+    padding:.34rem .74rem;transition:border-color .15s,color .15s,background .15s;
+  }
+  .chip:hover{border-color:var(--brass);color:#fff}
+  .seg{display:inline-flex;border:1px solid var(--rule);border-radius:100px;overflow:hidden;background:#12142a}
+  .seg button{
+    cursor:pointer;border:0;background:transparent;color:var(--bone-dim);
+    padding:.4rem .8rem;font-size:.82rem;transition:color .15s,background .15s
+  }
+  .seg button[aria-pressed="true"]{background:var(--brass);color:#20160a;font-weight:600}
+  .seg button:focus-visible,.chip:focus-visible{outline:2px solid var(--brass);outline-offset:2px}
+  select{
+    background:#12142a;color:var(--bone);border:1px solid var(--rule);border-radius:8px;
+    padding:.42rem .6rem;font-size:.85rem
+  }
+  select:focus-visible{outline:2px solid var(--brass);outline-offset:1px}
+  .hint{font-size:.78rem;color:var(--bone-dim)}
+  .hint b{color:var(--brass);font-weight:600}
+  .err{margin-top:.9rem;font-size:.85rem;color:#f0b8a0;font-family:"Spline Sans Mono",monospace}
+  .err:empty{display:none}
+
+  /* ---- the leaf: aligned grid ---- */
+  .leaf-frame{position:relative}
+  .scroll-hint{font-size:.72rem;color:var(--bone-dim);letter-spacing:.14em;text-transform:uppercase;margin:.2rem 0 .55rem}
+  .scroller{
+    overflow-x:auto;overflow-y:hidden;border-radius:16px;
+    background:
+      linear-gradient(180deg,#f6efe0,var(--parch) 22%,var(--parch) 78%,#e8dcc2);
+    box-shadow:var(--leaf-shadow);
+    border:1px solid var(--parch-edge);
+    padding:1.1rem .4rem 1.15rem;
+    scrollbar-color:var(--brass-deep) transparent;
+  }
+  .scroller::-webkit-scrollbar{height:9px}
+  .scroller::-webkit-scrollbar-thumb{background:var(--brass-deep);border-radius:20px}
+  .grid{display:grid;grid-auto-columns:min-content;grid-template-rows:repeat(4,auto);width:max-content}
+  .lab{
+    position:sticky;left:0;z-index:3;
+    font-size:.66rem;letter-spacing:.16em;text-transform:uppercase;color:var(--ink-soft);
+    display:flex;align-items:center;padding:0 .95rem 0 .7rem;white-space:nowrap;
+    background:linear-gradient(90deg,var(--parch) 72%,rgba(239,229,208,0));
+  }
+  .lab.tal{color:var(--brass-deep);font-weight:600}
+  .cell{
+    position:relative;display:flex;align-items:center;justify-content:center;
+    min-width:2.5rem;padding:1.25rem .18rem;color:var(--ink)
+  }
+  .cell.tal{padding:.35rem .18rem;min-height:1.4rem;font-size:.8rem;color:var(--ink-soft)}
+  .cell.tal .sam{color:var(--brass-deep);font-weight:700;font-family:"Spline Sans Mono",monospace}
+  .cell.tal .num{font-weight:600;font-family:"Spline Sans Mono",monospace}
+  .cell.tal .khali{color:#a98b6b}
+  .cell.tal .dotbeat{color:#c9b593}
+
+  .roman{font-family:"Spline Sans Mono",monospace;font-size:1.02rem;font-weight:500;letter-spacing:.02em}
+  .bhat{font-family:"Cormorant Garamond",serif;font-size:1.6rem;font-weight:600;line-height:1}
+  .gur{font-family:"Noto Serif Gurmukhi",serif;font-size:1.5rem;line-height:1}
+  .label-tok{font-family:"Spline Sans",sans-serif;font-size:.8rem;font-style:italic;color:var(--ink-soft)}
+
+  /* positioned marks — no combining chars, pure CSS */
+  .glyph{position:relative;display:inline-block;padding:.55rem .05rem}
+  .glyph .komal{position:absolute;left:8%;right:8%;bottom:.34rem;height:2px;background:var(--ink);border-radius:2px}
+  .glyph .teevra{position:absolute;left:50%;transform:translateX(-50%);top:.30rem;width:2px;height:.62rem;background:var(--ink);border-radius:2px}
+  .glyph .above,.glyph .below{position:absolute;left:50%;transform:translateX(-50%);display:flex;gap:3px}
+  .glyph .above{top:.02rem}
+  .glyph .below{bottom:.02rem}
+  .glyph .above.hi{top:-.16rem}      /* ati-tar sits above the tar row */
+  .glyph .below.lo{bottom:-.16rem}
+  .glyph .d{width:4px;height:4px;border-radius:50%;background:var(--ink)}
+
+  .sep{align-self:stretch;grid-row:1 / -1;width:1px;margin:0 .28rem;background:transparent;display:flex;align-items:center;justify-content:center}
+  .sep.section{background:linear-gradient(180deg,transparent,rgba(36,26,16,.32),transparent);margin:0 .5rem;width:1.5px}
+  .sep.phrase{width:1.1rem}
+  .sep.phrase span{width:3px;height:3px;border-radius:50%;background:#c3ac86}
+
+  .sustain{width:1.35rem;height:2px;background:var(--ink);border-radius:2px;opacity:.72}
+  .rest{width:.62rem;height:.62rem;border:1.5px solid #b49a72;border-radius:50%}
+  .group{display:flex;align-items:flex-end;gap:.18rem;position:relative}
+  .group::after{content:"";position:absolute;left:-2px;right:-2px;bottom:.1rem;height:0;border-bottom:1.5px solid var(--ink-soft);border-radius:0 0 6px 6px}
+  .group .glyph{padding-bottom:.7rem}
+  .group .bhat,.group .gur{font-size:1.15rem}
+  .group .roman{font-size:.8rem}
+
+  /* active beat cross-highlight */
+  .beat[data-hl="1"] .cell,.beat[data-hl="1"] .cell *{color:var(--brass-deep)}
+  .beat[data-hl="1"] .glyph .komal,.beat[data-hl="1"] .glyph .teevra,.beat[data-hl="1"] .glyph .d{background:var(--brass-deep)}
+  .beat{display:contents}
+
+  .legend{display:flex;flex-wrap:wrap;gap:1rem 1.6rem;margin:1.4rem 0 0;font-size:.82rem;color:var(--bone-dim)}
+  .legend .k{display:inline-flex;align-items:center;gap:.5rem}
+  .swatch{position:relative;width:1.4rem;height:1.6rem;display:inline-flex;align-items:center;justify-content:center;color:var(--bone);font-family:"Cormorant Garamond",serif;font-size:1.2rem;font-weight:600}
+  .swatch i{position:absolute;background:var(--brass)}
+  .swatch .u{left:12%;right:12%;bottom:2px;height:2px;border-radius:2px}
+  .swatch .t{left:50%;transform:translateX(-50%);top:1px;width:2px;height:9px;border-radius:2px}
+  .swatch .dot{width:4px;height:4px;border-radius:50%;top:0;left:50%;transform:translateX(-50%)}
+  .swatch .dotb{width:4px;height:4px;border-radius:50%;bottom:0;left:50%;transform:translateX(-50%)}
+
+  footer{margin-top:2.6rem;padding-top:1.2rem;border-top:1px solid var(--rule);color:var(--bone-dim);font-size:.82rem;max-width:64ch}
+  footer b{color:var(--bone);font-weight:600}
+  a{color:var(--brass)}
+
+  @media (max-width:560px){
+    .bhat{font-size:1.4rem}.gur{font-size:1.32rem}.cell{min-width:2.15rem}
+  }
+  @media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+
+<div class="wrap">
+  <header>
+    <p class="eyebrow">Gurmat Sangeet · notation renderer</p>
+    <h1>Sur Lekh — one notation, three hands <span class="gur">ਸੁਰ ਲੇਖ</span></h1>
+    <p class="lede">Type a single canonical line. It renders as plain <em>Roman</em>, as <em>Bhatkhande</em> with the komal, teevra and octave marks set exactly where a scribe would place them, and in <em>Gurmukhi</em> — every mark positioned by CSS, so nothing depends on a music glyph that Unicode never encoded.</p>
+  </header>
+
+  <section class="console" aria-label="Notation input">
+    <label class="field-label" for="src">Canonical line</label>
+    <textarea id="src" spellcheck="false" autocapitalize="off" autocorrect="off">S R G m P D N S. | S. N D P m G R S</textarea>
+
+    <div class="row">
+      <div class="ctrl">
+        <span class="field-label" style="margin:0">Examples</span>
+        <div class="chips" id="chips"></div>
+      </div>
+      <div class="ctrl">
+        <span class="field-label" style="margin:0">Ma convention</span>
+        <div class="seg" id="conv" role="group" aria-label="Ma convention">
+          <button data-c="pitch-height" aria-pressed="true">Pitch-height (m = shuddh)</button>
+          <button data-c="shuddha-set" aria-pressed="false">Shuddha-set (m = teevra)</button>
+        </div>
+      </div>
+      <div class="ctrl">
+        <label class="field-label" style="margin:0" for="taal">Taal reference</label>
+        <select id="taal">
+          <option value="none">None</option>
+          <option value="teentaal" selected>Teentaal · 16</option>
+          <option value="jhaptaal">Jhaptaal · 10</option>
+          <option value="ektaal">Ektaal · 12</option>
+          <option value="keherwa">Keherwa · 8</option>
+          <option value="dadra">Dadra · 6</option>
+        </select>
+      </div>
+    </div>
+    <p class="hint" style="margin:.9rem 0 0">Switch the convention and watch <b>m</b> flip between shuddh and teevra Ma across every hand — the stored line never changes, only its reading.</p>
+    <div class="err" id="err" role="alert"></div>
+  </section>
+
+  <div class="leaf-frame">
+    <p class="scroll-hint">the leaf · scroll →</p>
+    <div class="scroller">
+      <div class="grid" id="grid"></div>
+    </div>
+  </div>
+
+  <div class="legend">
+    <span class="k"><span class="swatch">R<i class="u"></i></span> komal — bar beneath</span>
+    <span class="k"><span class="swatch">M<i class="t"></i></span> teevra — stroke above</span>
+    <span class="k"><span class="swatch">N<i class="dotb"></i></span> mandra — dot below</span>
+    <span class="k"><span class="swatch">N<i class="dot"></i></span> tar — dot above</span>
+    <span class="k"><span class="rest" style="border-color:var(--bone-dim)"></span> rest <code>_</code></span>
+    <span class="k"><span class="sustain" style="background:var(--bone-dim);width:1.1rem"></span> sustain <code>-</code></span>
+  </div>
+
+  <footer>
+    <b>How this proves the point.</b> The three rows are one parsed data structure, drawn three ways, by <code>../lib/sargam.js</code> (parsing) and <code>../lib/sargam-render.js</code> (display) — this page adds no notation logic of its own. The Gurmukhi swaras (ਸ ਰੇ ਗ ਮ ਪ ਧ ਨੇ) are real Unicode letters; their komal/teevra/octave marks are CSS boxes, not the combining characters the 2013 proposal asked for and never got. Grammar and storage rules live in <b>SARGAM.md</b> at the repo root. Taal alignment here is illustrative — each played beat consumes one matra.
+  </footer>
+</div>
+
+<script>
+import { parse } from '../lib/sargam.js';
+import { GUR, ROMAN, glyphHTML } from '../lib/sargam-render.js';
+
+/* ---------- taal patterns: matra index -> marker ---------- */
+const TAAL = {
+  none: { len: 0, marks: {} },
+  teentaal: { len: 16, marks: { 0: 'X', 4: '2', 8: '0', 12: '3' } },
+  jhaptaal: { len: 10, marks: { 0: 'X', 2: '2', 5: '0', 7: '3' } },
+  ektaal: { len: 12, marks: { 0: 'X', 2: '0', 4: '2', 6: '0', 8: '3', 10: '4' } },
+  keherwa: { len: 8, marks: { 0: 'X', 4: '0' } },
+  dadra: { len: 6, marks: { 0: 'X', 3: '0' } },
+};
+function talCell(mark) {
+  if (mark === undefined) return '<span class="dotbeat">·</span>';
+  if (mark === 'X') return '<span class="sam">X</span>';
+  if (mark === '0') return '<span class="khali">0</span>';
+  return `<span class="num">${mark}</span>`;
+}
+
+/* ---------- build the aligned grid ---------- */
+const grid = document.getElementById('grid');
+const err = document.getElementById('err');
+
+function cell(cls, html) {
+  const d = document.createElement('div');
+  d.className = 'cell ' + cls;
+  d.innerHTML = html;
+  return d;
+}
+
+function render() {
+  const maConvention = document.querySelector("#conv button[aria-pressed='true']").dataset.c;
+  const taal = TAAL[document.getElementById('taal').value];
+  let events;
+  try {
+    events = parse(document.getElementById('src').value, { maConvention });
+    err.textContent = '';
+  } catch (e) {
+    err.textContent = '⚠ ' + e.message + ' — check the line and try again.';
+    return;
+  }
+
+  grid.innerHTML = '';
+  ['Taal', 'Roman', 'Bhatkhande', 'Gurmukhi'].forEach((t, i) => {
+    const l = document.createElement('div');
+    l.className = 'lab' + (i === 0 ? ' tal' : '');
+    l.textContent = t;
+    l.style.gridRow = i + 1; l.style.gridColumn = 1;
+    grid.appendChild(l);
+  });
+
+  let col = 2, matra = 0;
+  for (const ev of events) {
+    if (ev.type === 'section' || ev.type === 'phrase') {
+      const s = document.createElement('div');
+      s.className = 'sep ' + ev.type;
+      if (ev.type === 'phrase') s.innerHTML = '<span></span>';
+      s.style.gridColumn = col; grid.appendChild(s); col++; continue;
+    }
+    const talMark = taal.len ? taal.marks[matra % taal.len] : undefined;
+    const cTal = cell('tal', taal.len ? talCell(talMark) : '');
+    let cR, cB, cG;
+
+    if (ev.type === 'sustain') {
+      cR = cell('roman', '—'); cB = cell('bhat', '<span class="sustain"></span>'); cG = cell('gur', '<span class="sustain"></span>');
+    } else if (ev.type === 'rest') {
+      cR = cell('roman', '_'); cB = cell('bhat', '<span class="rest"></span>'); cG = cell('gur', '<span class="rest"></span>');
+    } else if (ev.type === 'label') {
+      cR = cell('roman label-tok', ev.text); cB = cell('bhat label-tok', ev.text); cG = cell('gur label-tok', ev.text);
+    } else if (ev.type === 'group') {
+      cR = cell('roman group', '(' + ev.swaras.map((s) => s.raw).join(' ') + ')');
+      cB = cell('bhat group', '<div class="group">' + ev.swaras.map((s) => glyphHTML(ROMAN[s.note], s)).join('') + '</div>');
+      cG = cell('gur group', '<div class="group">' + ev.swaras.map((s) => glyphHTML(GUR[s.note], s)).join('') + '</div>');
+    } else { // note
+      cR = cell('roman', ev.raw);
+      cB = cell('bhat', glyphHTML(ROMAN[ev.note], ev));
+      cG = cell('gur', glyphHTML(GUR[ev.note], ev));
+    }
+    [[cTal, 1], [cR, 2], [cB, 3], [cG, 4]].forEach(([c, r]) => {
+      c.style.gridColumn = col; c.style.gridRow = r; c.dataset.col = col; grid.appendChild(c);
+    });
+    col++; matra++;
+  }
+  wireHover();
+}
+
+function wireHover() {
+  const cells = [...grid.querySelectorAll('.cell[data-col]')];
+  function hi(col, on) {
+    cells.forEach((c) => {
+      if (c.dataset.col === String(col)) {
+        c.style.color = on ? 'var(--brass-deep)' : '';
+        c.querySelectorAll('.komal,.teevra,.d').forEach((m) => { m.style.background = on ? 'var(--brass-deep)' : ''; });
+      }
+    });
+  }
+  cells.forEach((c) => {
+    c.addEventListener('mouseenter', () => hi(c.dataset.col, true));
+    c.addEventListener('mouseleave', () => hi(c.dataset.col, false));
+  });
+}
+
+/* ---------- examples + controls ---------- */
+const EXAMPLES = [
+  ['Bilaval alankar', 'S R G m P D N S. | S. N D P m G R S'],
+  ['Siri Raag aroha *', 'S r r P , m P N S.'],
+  ['Features: hold · rest · group · label', 'S - (R g) m | P _ D. N. S.. | Waheguru'],
+  ['Mandra to tar', '..P .N .S S R G S. R. S..'],
+];
+const chips = document.getElementById('chips');
+EXAMPLES.forEach(([label, line]) => {
+  const b = document.createElement('button');
+  b.className = 'chip'; b.textContent = label;
+  b.onclick = () => { document.getElementById('src').value = line; render(); };
+  chips.appendChild(b);
+});
+document.querySelectorAll('#conv button').forEach((b) => b.onclick = () => {
+  document.querySelectorAll('#conv button').forEach((x) => x.setAttribute('aria-pressed', String(x === b)));
+  render();
+});
+document.getElementById('src').addEventListener('input', render);
+document.getElementById('taal').addEventListener('change', render);
+render();
+</script>
