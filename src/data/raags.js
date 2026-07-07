@@ -213,7 +213,7 @@ export const RAAGS = {
     komal: [], teevra: [], varjit: [], tukda: '',
     time: 'Evening',
     mood: 'A raag with Muslim/Persian influence; longing and beauty.',
-    notes: '',
+    notes: 'Data does not distinguish a separate Tilang Kaafi; this playlist (originally labelled Tilang Kaafi) is the only Tilang-related one available.',
     youtubePlaylist: 'https://www.youtube.com/playlist?list=PLQSK-tQ7aj4XxP1wIfstzOTFWrN3Ym9E6',
     sourceNote: 'Compiled from public sources',
   },
