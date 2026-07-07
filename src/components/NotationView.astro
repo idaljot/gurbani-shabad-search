@@ -1,0 +1,232 @@
+---
+// Renders shabad.sthayi/antara/alaap through the SARGAM parser as a script
+// toggle (Roman / Bhatkhande / Gurmukhi), with an optional taal-bol strip
+// pulled from src/data/taals.js (never a second, duplicate taal table here).
+import { TAALS } from '../data/taals.js';
+
+interface Props {
+  sthayi?: string | null;
+  antara?: string | null;
+  alaap?: string | null;
+  taal?: string | null;
+}
+const { sthayi, antara, alaap, taal } = Astro.props;
+
+const blocks = [
+  { key: 'alaap', label: 'Alaap', text: alaap },
+  { key: 'sthayi', label: 'Sthayi', text: sthayi },
+  { key: 'antara', label: 'Antara', text: antara },
+].filter((b) => b.text);
+
+const taalBeats = taal && TAALS[taal] ? TAALS[taal].beats : null;
+---
+{blocks.length > 0 && (
+  <section
+    class="notation-view"
+    data-blocks={JSON.stringify(blocks)}
+    data-taal-beats={JSON.stringify(taalBeats)}
+  >
+    <div class="notation-controls">
+      <div class="seg" data-role="script" role="group" aria-label="Notation script">
+        <button type="button" data-v="roman" aria-pressed="true">Roman</button>
+        <button type="button" data-v="bhatkhande" aria-pressed="false">Bhatkhande</button>
+        <button type="button" data-v="gurmukhi" aria-pressed="false">Gurmukhi</button>
+      </div>
+      <div class="seg" data-role="ma" role="group" aria-label="Ma convention">
+        <button type="button" data-v="pitch-height" aria-pressed="true" title="m = shuddh Ma, M = teevra Ma (default)">m = shuddh</button>
+        <button type="button" data-v="shuddha-set" aria-pressed="false" title="Parrikar / shuddha-set convention: m = teevra Ma, M = shuddh Ma">m = teevra</button>
+      </div>
+    </div>
+    <div class="notation-blocks" data-role="blocks"></div>
+  </section>
+)}
+
+<style>
+  .notation-view { display: flex; flex-direction: column; gap: 1rem; }
+  .notation-controls { display: flex; flex-wrap: wrap; gap: 0.75rem; }
+  .seg {
+    display: inline-flex; border: 1px solid var(--border); border-radius: 999px;
+    overflow: hidden; background: var(--panel);
+  }
+  .seg button {
+    font-family: var(--font-body); cursor: pointer; border: 0; background: transparent;
+    color: var(--muted); padding: 0.35rem 0.75rem; font-size: 0.8rem;
+  }
+  .seg button[aria-pressed='true'] { background: var(--accent); color: #fff; font-weight: 600; }
+  .seg button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+</style>
+
+<script>
+  import { parse } from '../lib/sargam.js';
+  import { GUR, ROMAN, glyphHTML } from '../lib/sargam-render.js';
+
+  const SCRIPT_KEY = 'sargam-script';
+  const MA_KEY = 'sargam-ma-convention';
+
+  function noteHTML(sw, script) {
+    if (script === 'roman') return `<span class="sargam-roman">${sw.raw}</span>`;
+    const text = script === 'gurmukhi' ? GUR[sw.note] : ROMAN[sw.note];
+    return `<span class="sargam-${script}">${glyphHTML(text, sw)}</span>`;
+  }
+
+  function eventHTML(ev, script) {
+    if (ev.type === 'sustain') return script === 'roman' ? '<span class="sargam-roman">—</span>' : '<span class="sargam-sustain"></span>';
+    if (ev.type === 'rest') return script === 'roman' ? '<span class="sargam-roman">_</span>' : '<span class="sargam-rest"></span>';
+    if (ev.type === 'label') return `<span class="sargam-label">${ev.text}</span>`;
+    if (ev.type === 'group') {
+      return '<span class="sargam-group">' + ev.swaras.map((s) => noteHTML(s, script)).join('') + '</span>';
+    }
+    return noteHTML(ev, script);
+  }
+
+  function renderBlock(container, text, script, maConvention, taalBeats) {
+    container.innerHTML = '';
+    let events;
+    try {
+      events = parse(text, { maConvention });
+    } catch (e) {
+      const p = document.createElement('p');
+      p.className = 'sargam-parse-error';
+      p.textContent = `⚠ couldn't render this notation: ${e.message}`;
+      container.appendChild(p);
+      return;
+    }
+
+    const grid = document.createElement('div');
+    grid.className = 'sargam-grid';
+    let matra = 0;
+    for (const ev of events) {
+      if (ev.type === 'section' || ev.type === 'phrase') {
+        const sep = document.createElement('div');
+        sep.className = `sargam-sep sargam-sep-${ev.type}`;
+        grid.appendChild(sep);
+        continue;
+      }
+      const col = document.createElement('div');
+      col.className = 'sargam-col';
+      if (taalBeats && taalBeats.length) {
+        const i = matra % taalBeats.length;
+        const bol = document.createElement('div');
+        bol.className = 'sargam-bol' + (i === 0 ? ' sam' : '');
+        bol.textContent = taalBeats[i];
+        col.appendChild(bol);
+      }
+      const note = document.createElement('div');
+      note.className = 'sargam-note';
+      note.innerHTML = eventHTML(ev, script);
+      col.appendChild(note);
+      grid.appendChild(col);
+      matra++;
+    }
+    container.appendChild(grid);
+  }
+
+  function initNotationView(section) {
+    const blocks = JSON.parse(section.dataset.blocks || '[]');
+    const taalBeats = JSON.parse(section.dataset.taalBeats || 'null');
+    const blocksContainer = section.querySelector('[data-role="blocks"]');
+
+    let script = localStorage.getItem(SCRIPT_KEY) || 'roman';
+    let maConvention = localStorage.getItem(MA_KEY) || 'pitch-height';
+
+    function setPressed(group, value) {
+      group.querySelectorAll('button').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.v === value)));
+    }
+    setPressed(section.querySelector('[data-role="script"]'), script);
+    setPressed(section.querySelector('[data-role="ma"]'), maConvention);
+
+    function renderAll() {
+      blocksContainer.innerHTML = '';
+      for (const block of blocks) {
+        const wrap = document.createElement('div');
+        wrap.className = 'sargam-block';
+        const label = document.createElement('p');
+        label.className = 'sargam-block-label';
+        label.textContent = block.label;
+        wrap.appendChild(label);
+        const scroller = document.createElement('div');
+        scroller.className = 'sargam-scroller';
+        wrap.appendChild(scroller);
+        blocksContainer.appendChild(wrap);
+        renderBlock(scroller, block.text, script, maConvention, taalBeats);
+      }
+    }
+
+    section.querySelector('[data-role="script"]').addEventListener('click', (e) => {
+      const btn = e.target.closest('button');
+      if (!btn) return;
+      script = btn.dataset.v;
+      localStorage.setItem(SCRIPT_KEY, script);
+      setPressed(e.currentTarget, script);
+      renderAll();
+    });
+    section.querySelector('[data-role="ma"]').addEventListener('click', (e) => {
+      const btn = e.target.closest('button');
+      if (!btn) return;
+      maConvention = btn.dataset.v;
+      localStorage.setItem(MA_KEY, maConvention);
+      setPressed(e.currentTarget, maConvention);
+      renderAll();
+    });
+
+    renderAll();
+  }
+
+  document.querySelectorAll('.notation-view').forEach(initNotationView);
+</script>
+
+<style is:global>
+  .sargam-block { margin-bottom: 1.1rem; }
+  .sargam-block:last-child { margin-bottom: 0; }
+  .sargam-block-label {
+    margin: 0 0 0.4rem; font-size: 0.85rem; font-weight: 600; color: var(--accent);
+    font-family: var(--font-body);
+  }
+  .sargam-scroller { overflow-x: auto; padding-bottom: 0.2rem; }
+  .sargam-parse-error { margin: 0; color: #b3452f; font-size: 0.85rem; font-family: var(--font-body); }
+
+  .sargam-grid { display: flex; align-items: flex-end; gap: 0; width: max-content; }
+  .sargam-col {
+    display: flex; flex-direction: column; align-items: center; justify-content: flex-end;
+    min-width: 2.4rem; padding: 0 0.15rem;
+  }
+  .sargam-bol {
+    font-size: 0.66rem; letter-spacing: 0.03em; color: var(--muted);
+    font-family: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+    margin-bottom: 0.15rem; white-space: nowrap;
+  }
+  .sargam-bol.sam { color: var(--accent); font-weight: 700; }
+  .sargam-note {
+    display: flex; align-items: center; justify-content: center;
+    min-height: 2.1rem; color: var(--ink);
+  }
+  .sargam-roman {
+    font-family: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+    font-size: 1rem; font-weight: 500;
+  }
+  .sargam-label {
+    font-family: var(--font-body); font-size: 0.78rem; font-style: italic; color: var(--muted);
+  }
+
+  .glyph { position: relative; display: inline-block; padding: 0.5rem 0.05rem; }
+  .sargam-bhatkhande .glyph { font-family: var(--font-heading); font-size: 1.3rem; font-weight: 600; }
+  .sargam-gurmukhi .glyph { font-family: var(--font-gurmukhi); font-size: 1.25rem; }
+
+  .glyph .komal { position: absolute; left: 8%; right: 8%; bottom: 0.3rem; height: 2px; background: var(--ink); border-radius: 2px; }
+  .glyph .teevra { position: absolute; left: 50%; transform: translateX(-50%); top: 0.26rem; width: 2px; height: 0.55rem; background: var(--ink); border-radius: 2px; }
+  .glyph .above, .glyph .below { position: absolute; left: 50%; transform: translateX(-50%); display: flex; gap: 2px; }
+  .glyph .above { top: 0; }
+  .glyph .below { bottom: 0; }
+  .glyph .above.hi { top: -0.14rem; }
+  .glyph .below.lo { bottom: -0.14rem; }
+  .glyph .d { width: 3.5px; height: 3.5px; border-radius: 50%; background: var(--ink); }
+
+  .sargam-sustain { width: 1.2rem; height: 2px; background: var(--ink); border-radius: 2px; opacity: 0.7; margin-bottom: 0.9rem; }
+  .sargam-rest { width: 0.55rem; height: 0.55rem; border: 1.5px solid var(--muted); border-radius: 50%; margin-bottom: 0.85rem; }
+  .sargam-group { display: flex; align-items: flex-end; gap: 0.12rem; }
+  .sargam-group .glyph { padding-bottom: 0.6rem; font-size: 1rem; }
+
+  .sargam-sep { align-self: stretch; width: 1px; margin: 0 0.35rem; }
+  .sargam-sep-section { background: var(--border); width: 1.5px; margin: 0 0.55rem; }
+  .sargam-sep-phrase { width: 0.7rem; }
+</style>
