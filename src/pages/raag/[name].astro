@@ -33,12 +33,26 @@ const generalList = raagShabads.filter((s) => !notatedIds.has(s.id)).slice(0, 5)
 
 const hasMusicalInfo = Boolean(
   raagInfo && (
-    raagInfo.thaat || raagInfo.arohi || raagInfo.avrohi || raagInfo.vadi || raagInfo.samvadi ||
+    raagInfo.thaat || raagInfo.jati || raagInfo.aroh || raagInfo.avroh || raagInfo.vadi || raagInfo.samvadi ||
     (raagInfo.komal && raagInfo.komal.length) || (raagInfo.teevra && raagInfo.teevra.length) ||
-    (raagInfo.varjit && raagInfo.varjit.length) || raagInfo.time || raagInfo.mood || raagInfo.notes
+    (raagInfo.varjit && raagInfo.varjit.length) || raagInfo.tukda ||
+    raagInfo.time || raagInfo.mood || raagInfo.notes
+  )
+);
+const hasSwarDetails = Boolean(
+  raagInfo && (
+    raagInfo.thaat || raagInfo.jati || raagInfo.aroh || raagInfo.avroh || raagInfo.vadi || raagInfo.samvadi ||
+    (raagInfo.komal && raagInfo.komal.length) || (raagInfo.teevra && raagInfo.teevra.length) ||
+    (raagInfo.varjit && raagInfo.varjit.length) || raagInfo.tukda
   )
 );
 const hasPlaylist = Boolean(raagInfo && raagInfo.youtubePlaylist);
+
+// Review-status badge: only meaningful when there's actual info to review in
+// the first place — a raag with no data at all gets neither badge, same
+// "nothing to show" treatment as the coming-soon message below.
+const status = (raagInfo && raagInfo.status) || 'draft';
+const isApproved = status === 'approved';
 ---
 <Layout title={`${name} · Gurbani Kirtan Swar Notation`}>
   <p class="back"><a href="/">&larr; Back to search</a></p>
@@ -52,19 +66,51 @@ const hasPlaylist = Boolean(raagInfo && raagInfo.youtubePlaylist);
   )}
 
   {hasMusicalInfo ? (
-    <dl class="raag-facts">
-      {raagInfo.thaat && <><dt>Thaat</dt><dd>{raagInfo.thaat}</dd></>}
-      {raagInfo.arohi && <><dt>Arohi</dt><dd>{raagInfo.arohi}</dd></>}
-      {raagInfo.avrohi && <><dt>Avrohi</dt><dd>{raagInfo.avrohi}</dd></>}
-      {raagInfo.vadi && <><dt>Vadi</dt><dd>{raagInfo.vadi}</dd></>}
-      {raagInfo.samvadi && <><dt>Samvadi</dt><dd>{raagInfo.samvadi}</dd></>}
-      {raagInfo.komal && raagInfo.komal.length > 0 && <><dt>Komal swars</dt><dd>{raagInfo.komal.join(', ')}</dd></>}
-      {raagInfo.teevra && raagInfo.teevra.length > 0 && <><dt>Teevra swars</dt><dd>{raagInfo.teevra.join(', ')}</dd></>}
-      {raagInfo.varjit && raagInfo.varjit.length > 0 && <><dt>Varjit swars</dt><dd>{raagInfo.varjit.join(', ')}</dd></>}
-      {raagInfo.time && <><dt>Time</dt><dd>{raagInfo.time}</dd></>}
-      {raagInfo.mood && <><dt>Mood</dt><dd>{raagInfo.mood}</dd></>}
-      {raagInfo.notes && <><dt>Notes</dt><dd>{raagInfo.notes}</dd></>}
-    </dl>
+    <section class="raag-info">
+      <div class="raag-info-header">
+        <h2>About this Raag</h2>
+        {isApproved ? (
+          <span class="status-badge status-approved">&#10003; Reviewed by Bhai Jaspal Singh Ji</span>
+        ) : (
+          <span class="status-badge status-draft">
+            {raagInfo.sourceNote || 'Compiled from public sources'} &mdash; pending review by Bhai Jaspal Singh Ji
+          </span>
+        )}
+      </div>
+
+      {(raagInfo.mood || raagInfo.time) && (
+        <div class="raag-highlights">
+          {raagInfo.mood && <p class="raag-mood">{raagInfo.mood}</p>}
+          {raagInfo.time && (
+            <p class="raag-time">
+              <strong>Traditional time:</strong> {raagInfo.time}
+              <span class="raag-time-caveat">
+                In Gurmat Sangeet, raags express mood rather than being restricted to a
+                specific clock time (unlike Hindustani classical) &mdash; this is a
+                traditional association, not a rule.
+              </span>
+            </p>
+          )}
+        </div>
+      )}
+
+      {hasSwarDetails && (
+        <dl class="raag-facts">
+          {raagInfo.thaat && <><dt>Thaat</dt><dd>{raagInfo.thaat}</dd></>}
+          {raagInfo.jati && <><dt>Jati</dt><dd>{raagInfo.jati}</dd></>}
+          {raagInfo.aroh && <><dt>Aroh</dt><dd>{raagInfo.aroh}</dd></>}
+          {raagInfo.avroh && <><dt>Avroh</dt><dd>{raagInfo.avroh}</dd></>}
+          {raagInfo.vadi && <><dt>Vadi</dt><dd>{raagInfo.vadi}</dd></>}
+          {raagInfo.samvadi && <><dt>Samvadi</dt><dd>{raagInfo.samvadi}</dd></>}
+          {raagInfo.komal && raagInfo.komal.length > 0 && <><dt>Komal swars</dt><dd>{raagInfo.komal.join(', ')}</dd></>}
+          {raagInfo.teevra && raagInfo.teevra.length > 0 && <><dt>Teevra swars</dt><dd>{raagInfo.teevra.join(', ')}</dd></>}
+          {raagInfo.varjit && raagInfo.varjit.length > 0 && <><dt>Varjit swars</dt><dd>{raagInfo.varjit.join(', ')}</dd></>}
+          {raagInfo.tukda && <><dt>Tukda</dt><dd>{raagInfo.tukda}</dd></>}
+        </dl>
+      )}
+
+      {raagInfo.notes && <p class="raag-notes">{raagInfo.notes}</p>}
+    </section>
   ) : (
     <p class="raag-coming-soon">Detailed raag information coming soon.</p>
   )}
@@ -124,9 +170,35 @@ const hasPlaylist = Boolean(raagInfo && raagInfo.youtubePlaylist);
       font-size: 0.9rem; font-weight: 600; padding: 0.5rem 0.9rem; border-radius: 999px;
       margin: 0.75rem 0 1.25rem;
     }
-    .raag-facts { display: grid; grid-template-columns: auto 1fr; gap: 0.4rem 1rem; margin: 0 0 1.5rem; font-size: 0.9rem; }
+    .raag-info { margin: 0.75rem 0 1.5rem; }
+    .raag-info-header {
+      display: flex; flex-wrap: wrap; align-items: center; gap: 0.6rem;
+      margin-bottom: 0.75rem;
+    }
+    .raag-info-header h2 { margin: 0; }
+    .status-badge {
+      display: inline-block; padding: 0.2rem 0.65rem; border-radius: 999px;
+      font-size: 0.72rem; font-weight: 500; font-family: var(--font-body);
+      text-transform: none; letter-spacing: normal;
+    }
+    .status-draft { background: var(--accent-soft); color: var(--accent); }
+    .status-approved { background: #d8ecd8; color: #2e6b2e; }
+    .raag-highlights {
+      background: #fbf0dd; border: 1px solid #e8d4ad; border-radius: 8px;
+      padding: 0.7rem 0.9rem; margin-bottom: 0.9rem;
+    }
+    .raag-mood { margin: 0; font-size: 0.98rem; }
+    .raag-time { margin: 0.5rem 0 0; font-size: 0.9rem; }
+    .raag-time:first-child { margin-top: 0; }
+    .raag-time strong { font-weight: 600; }
+    .raag-time-caveat {
+      display: block; margin-top: 0.25rem; color: var(--muted);
+      font-size: 0.78rem; font-style: italic;
+    }
+    .raag-facts { display: grid; grid-template-columns: auto 1fr; gap: 0.4rem 1rem; margin: 0; font-size: 0.9rem; }
     .raag-facts dt { color: var(--muted); font-weight: 600; }
     .raag-facts dd { margin: 0; }
+    .raag-notes { margin: 0.9rem 0 0; color: var(--muted); font-size: 0.85rem; }
     .raag-coming-soon { margin: 0.75rem 0 1.5rem; color: var(--muted); font-size: 0.9rem; }
 
     h2 {
