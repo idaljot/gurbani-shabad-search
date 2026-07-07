@@ -17,6 +17,8 @@
 
 import { readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
+import { normalizeLegacyNotation } from './legacy-notation.mjs';
+import { parse as parseSargam } from '../src/lib/sargam.js';
 
 const BASE_FILE = path.join('src', 'data', 'shabads-base.json');
 const OUT_FILE = path.join('src', 'data', 'shabads.json');
@@ -125,6 +127,9 @@ export async function fetchNotation() {
 }
 
 const NOTATION_FIELDS = ['sthayi', 'antara', 'taal', 'tempo', 'key', 'alaap'];
+// These three (not taal/tempo/key) hold SARGAM notation strings, so they're
+// the ones run through the legacy normalizer and the sargam.js validator.
+const SARGAM_FIELDS = ['sthayi', 'antara', 'alaap'];
 
 function hasNotation(n) {
   return Boolean(n && (n.sthayi || n.antara || n.taal || n.key || n.alaap));
@@ -149,13 +154,41 @@ export function mergeNotation(base, notation, existingShabads = []) {
 
     const merged = { ...shabad };
     for (const field of NOTATION_FIELDS) {
-      merged[field] = notated ? (source[field] || null) : null;
+      let value = notated ? (source[field] || null) : null;
+      if (value && SARGAM_FIELDS.includes(field)) {
+        value = normalizeLegacyNotation(value, (msg) => console.warn(`  [legacy] ${shabad.shabadId} ${field}: ${msg}`));
+      }
+      merged[field] = value;
     }
     merged.notatedAt = notated ? (source.notatedAt || null) : null;
     return merged;
   });
 
   return { shabads, notationCount };
+}
+
+/**
+ * Validates every sargam field against the real parser and logs a warning
+ * (shabad ID + the exact error) for anything that doesn't parse, so it can
+ * be fixed by hand in the Google Sheet before the next publish. This never
+ * blocks the build — notation is contributor-submitted free text, and a bad
+ * entry shouldn't take the whole site down.
+ */
+export function validateNotation(shabads) {
+  let invalidCount = 0;
+  for (const shabad of shabads) {
+    for (const field of SARGAM_FIELDS) {
+      const value = shabad[field];
+      if (!value) continue;
+      try {
+        parseSargam(value);
+      } catch (err) {
+        console.warn(`  [sargam] ${shabad.shabadId} ${field}: ${err.message}`);
+        invalidCount++;
+      }
+    }
+  }
+  return invalidCount;
 }
 
 async function main() {
@@ -174,10 +207,18 @@ async function main() {
 
   const { shabads, notationCount } = mergeNotation(base, notation, existingShabads);
 
+  console.log('\nValidating sargam notation...');
+  const invalidCount = validateNotation(shabads);
+
   await writeFile(OUT_FILE, JSON.stringify(shabads), 'utf-8');
 
   console.log(`\nDone. Wrote ${shabads.length} shabads to ${OUT_FILE}`);
   console.log(`${notationCount} of them have Sur/Taal notation.`);
+  if (invalidCount) {
+    console.log(`${invalidCount} sargam field(s) above don't parse — fix them in the Sheet before publishing.`);
+  } else {
+    console.log('All sargam notation fields parse cleanly.');
+  }
   console.log('Commit this file to git so the site builds without depending on live services.');
 }
 
