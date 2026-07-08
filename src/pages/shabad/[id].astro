@@ -124,15 +124,23 @@ const showRaagSection = hasMusicalInfo || hasPlaylist;
     }
     .taal-bar strong { font-weight: 600; }
 
-    /* Notation reads better with real room for a taal cycle, which a
-       side-by-side column would halve again — so panels always stack, each
-       using the full (site-wide) main width, same as every other page. */
-    .panels { display: grid; grid-template-columns: 1fr; gap: 1.5rem; margin-top: 1.5rem; }
-    /* Grid items default to a content-based min-width, so a wide unwrapped
+    /* Sit side-by-side when the notation actually fits next to the shabad
+       text; drop to its own full-width row underneath when it doesn't —
+       driven by flexbox's own line-wrapping, not a viewport media query,
+       since "does it fit" depends on the notation's real content width
+       (which varies by taal — a short cycle fits, a long one won't), not
+       the screen size. flex-basis: max-content asks for the notation
+       panel's true unconstrained width; if text-panel's basis plus that
+       exceeds the row, flex-wrap moves it down to a new line, where
+       flex-grow lets it (and text-panel, if alone) fill the full width. */
+    .panels { display: flex; flex-wrap: wrap; align-items: flex-start; gap: 1.5rem; margin-top: 1.5rem; }
+    .text-panel { flex: 1 1 320px; min-width: 280px; }
+    .notation-panel { flex: 1 1 max-content; }
+    /* Flex items default to a content-based min-width, so a wide unwrapped
        notation grid several levels deep (its own overflow-x:auto is on a
-       nested div, not this direct grid item) would otherwise stretch this
-       whole column past the viewport instead of scrolling internally. */
-    .text-panel, .notation-panel { min-width: 0; }
+       nested div, not this direct flex item) would otherwise stretch this
+       whole item past its line instead of scrolling internally. */
+    .text-panel, .notation-panel { min-width: 0; max-width: 100%; }
 
     section h2 {
       font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.05em;
