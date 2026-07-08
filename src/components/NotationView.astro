@@ -19,12 +19,14 @@ const blocks = [
 ].filter((b) => b.text);
 
 const taalBeats = taal && TAALS[taal] ? TAALS[taal].beats : null;
+const taalVibhags = taal && TAALS[taal] ? TAALS[taal].vibhags : null;
 ---
 {blocks.length > 0 && (
   <section
     class="notation-view"
     data-blocks={JSON.stringify(blocks)}
     data-taal-beats={JSON.stringify(taalBeats)}
+    data-taal-vibhags={JSON.stringify(taalVibhags)}
   >
     <div class="notation-controls">
       <div class="seg" data-role="script" role="group" aria-label="Notation script">
@@ -79,7 +81,18 @@ const taalBeats = taal && TAALS[taal] ? TAALS[taal].beats : null;
     return noteHTML(ev, script);
   }
 
-  function renderBlock(container, text, script, maConvention, taalBeats) {
+  // Cumulative start-of-vibhag offsets within one cycle, e.g. Teentaal's [4,4,4,4]
+  // -> [0,4,8,12]. Index 0 is sam (already marked separately); the rest are the
+  // clap/vibhag divisions inside the cycle.
+  function vibhagBoundaries(vibhags) {
+    if (!vibhags || !vibhags.length) return [];
+    const bounds = [0];
+    let acc = 0;
+    for (const v of vibhags.slice(0, -1)) { acc += v; bounds.push(acc); }
+    return bounds;
+  }
+
+  function renderBlock(container, text, script, maConvention, taalBeats, taalVibhags) {
     container.innerHTML = '';
     let events;
     try {
@@ -96,6 +109,7 @@ const taalBeats = taal && TAALS[taal] ? TAALS[taal].beats : null;
     // new avartan, start a fresh row underneath instead of scrolling forever
     // sideways. With no known taal, there's no cycle length, so it stays one line.
     const cycleLen = taalBeats && taalBeats.length ? taalBeats.length : 0;
+    const vibhagStarts = new Set(vibhagBoundaries(taalVibhags));
     let grid;
     const startLine = () => {
       grid = document.createElement('div');
@@ -113,10 +127,10 @@ const taalBeats = taal && TAALS[taal] ? TAALS[taal].beats : null;
         continue;
       }
       if (cycleLen && matra > 0 && matra % cycleLen === 0) startLine();
+      const i = cycleLen ? matra % cycleLen : -1;
       const col = document.createElement('div');
-      col.className = 'sargam-col';
+      col.className = 'sargam-col' + (i > 0 && vibhagStarts.has(i) ? ' vibhag-start' : '');
       if (cycleLen) {
-        const i = matra % cycleLen;
         const bol = document.createElement('div');
         bol.className = 'sargam-bol' + (i === 0 ? ' sam' : '');
         bol.textContent = taalBeats[i];
@@ -134,6 +148,7 @@ const taalBeats = taal && TAALS[taal] ? TAALS[taal].beats : null;
   function initNotationView(section) {
     const blocks = JSON.parse(section.dataset.blocks || '[]');
     const taalBeats = JSON.parse(section.dataset.taalBeats || 'null');
+    const taalVibhags = JSON.parse(section.dataset.taalVibhags || 'null');
     const blocksContainer = section.querySelector('[data-role="blocks"]');
 
     let script = localStorage.getItem(SCRIPT_KEY) || 'roman';
@@ -158,7 +173,7 @@ const taalBeats = taal && TAALS[taal] ? TAALS[taal].beats : null;
         scroller.className = 'sargam-scroller';
         wrap.appendChild(scroller);
         blocksContainer.appendChild(wrap);
-        renderBlock(scroller, block.text, script, maConvention, taalBeats);
+        renderBlock(scroller, block.text, script, maConvention, taalBeats, taalVibhags);
       }
     }
 
@@ -201,6 +216,10 @@ const taalBeats = taal && TAALS[taal] ? TAALS[taal].beats : null;
     display: flex; flex-direction: column; align-items: center; justify-content: flex-end;
     min-width: 2.4rem; padding: 0 0.15rem;
   }
+  /* Marks the first beat of each vibhag (clap division) within a cycle, e.g.
+     Teentaal's 4+4+4+4 — distinct from the sam highlight and from a section
+     separator (which marks an original source line break, not the taal). */
+  .sargam-col.vibhag-start { margin-left: 0.45rem; border-left: 1px solid var(--border); padding-left: 0.35rem; }
   .sargam-bol {
     font-size: 0.66rem; letter-spacing: 0.03em; color: var(--muted);
     font-family: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
