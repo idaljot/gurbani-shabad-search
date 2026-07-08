@@ -254,7 +254,16 @@ const taalVibhags = taal && TAALS[taal] ? TAALS[taal].vibhags : null;
   }
 
   .glyph { position: relative; display: inline-block; padding: 0.5rem 0.05rem; }
-  .sargam-bhatkhande .glyph { font-family: var(--font-heading); font-size: 1.3rem; font-weight: 600; }
+  /* Same issue as the Gurmukhi block below: Fraunces' "normal" line-height
+     reserves noticeably more space above/below the ink than the visible
+     letter needs, so the shared mark offsets (top:0/bottom:0 etc., tuned
+     for a tighter box) leave the komal/octave marks floating off the
+     letter instead of reading as part of it. */
+  .sargam-bhatkhande .glyph { font-family: var(--font-heading); font-size: 1.3rem; font-weight: 600; line-height: 1; padding: 0.3rem 0.05rem 0.35rem; }
+  .sargam-bhatkhande .glyph .komal { bottom: 0.2rem; }
+  .sargam-bhatkhande .glyph .below { bottom: 0.28rem; }
+  .sargam-bhatkhande .glyph .below.lo { bottom: 0.14rem; }
+  .sargam-bhatkhande .glyph .teevra { top: 0.08rem; height: 0.45rem; }
   /* Noto Sans Gurmukhi's "normal" line-height reserves a lot of space above
      and below the visible ink (its line-box comes out ~1.7x the font-size,
      for stacked vowel signs/matras this script's other glyphs use) — left
