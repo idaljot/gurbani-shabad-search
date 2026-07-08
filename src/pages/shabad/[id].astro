@@ -124,12 +124,11 @@ const showRaagSection = hasMusicalInfo || hasPlaylist;
     }
     .taal-bar strong { font-weight: 600; }
 
-    .panels { display: grid; gap: 1.5rem; margin-top: 1.5rem; }
-    .panels.two { grid-template-columns: 1fr 1fr; }
-    .panels.one { grid-template-columns: 1fr; }
-    @media (max-width: 700px) {
-      .panels.two { grid-template-columns: 1fr; }
-    }
+    /* Notation reads better with real room for a taal cycle, which the 900px
+       main column (halved again if it sat side-by-side with the shabad text)
+       doesn't give it — so panels always stack, and .notation-panel below
+       breaks out to the full viewport width instead of staying boxed in. */
+    .panels { display: grid; grid-template-columns: 1fr; gap: 1.5rem; margin-top: 1.5rem; }
     /* Grid items default to a content-based min-width, so a wide unwrapped
        notation grid several levels deep (its own overflow-x:auto is on a
        nested div, not this direct grid item) would otherwise stretch this
@@ -148,6 +147,14 @@ const showRaagSection = hasMusicalInfo || hasPlaylist;
     .notation-panel {
       background: #fdf6ee;
       border-color: #ecdcc4;
+      border-left: 0;
+      border-right: 0;
+      border-radius: 0;
+      width: 100vw;
+      margin-left: calc(50% - 50vw);
+      margin-right: calc(50% - 50vw);
+      padding-left: clamp(1rem, 4vw, 3rem);
+      padding-right: clamp(1rem, 4vw, 3rem);
     }
     .lines { display: flex; flex-direction: column; gap: 0.45rem; }
     .line { margin: 0; font-size: 1.15rem; line-height: 1.7; font-family: var(--font-gurmukhi); }

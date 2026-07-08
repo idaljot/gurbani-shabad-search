@@ -105,16 +105,21 @@ const taalVibhags = taal && TAALS[taal] ? TAALS[taal].vibhags : null;
       return;
     }
 
-    // One taal cycle per line: every time the beat count would roll over into a
-    // new avartan, start a fresh row underneath instead of scrolling forever
-    // sideways. With no known taal, there's no cycle length, so it stays one line.
+    // Two taal cycles per line: every time the beat count would roll over into
+    // a THIRD avartan, start a fresh row underneath instead of scrolling
+    // forever sideways. With no known taal, there's no cycle length, so it
+    // stays one line. Within a line, sam (cycle start) always gets "X"; every
+    // other vibhag (clap division) start gets a plain "O" — real khali/tali
+    // identity isn't in src/data/taals.js, so this doesn't claim to know it.
     const cycleLen = taalBeats && taalBeats.length ? taalBeats.length : 0;
+    const rowLen = cycleLen * 2;
     const vibhagStarts = new Set(vibhagBoundaries(taalVibhags));
-    let grid;
+    let grid, colInRow;
     const startLine = () => {
       grid = document.createElement('div');
       grid.className = 'sargam-grid';
       container.appendChild(grid);
+      colInRow = 0;
     };
     startLine();
 
@@ -126,14 +131,20 @@ const taalVibhags = taal && TAALS[taal] ? TAALS[taal].vibhags : null;
         grid.appendChild(sep);
         continue;
       }
-      if (cycleLen && matra > 0 && matra % cycleLen === 0) startLine();
+      if (rowLen && matra > 0 && matra % rowLen === 0) startLine();
       const i = cycleLen ? matra % cycleLen : -1;
+      const isSam = i === 0;
+      const isVibhagStart = i > 0 && vibhagStarts.has(i);
+      const isMidRowCycleStart = isSam && colInRow > 0;
       const col = document.createElement('div');
-      col.className = 'sargam-col' + (i > 0 && vibhagStarts.has(i) ? ' vibhag-start' : '');
+      col.className = 'sargam-col'
+        + (isVibhagStart ? ' vibhag-start' : '')
+        + (isMidRowCycleStart ? ' cycle-start' : '');
       if (cycleLen) {
         const bol = document.createElement('div');
-        bol.className = 'sargam-bol' + (i === 0 ? ' sam' : '');
-        bol.textContent = taalBeats[i];
+        bol.className = 'sargam-bol' + (isSam ? ' sam' : '');
+        bol.textContent = isSam ? 'X' : (isVibhagStart ? 'O' : '');
+        if (taalBeats[i]) bol.title = taalBeats[i];
         col.appendChild(bol);
       }
       const note = document.createElement('div');
@@ -142,6 +153,7 @@ const taalVibhags = taal && TAALS[taal] ? TAALS[taal].vibhags : null;
       col.appendChild(note);
       grid.appendChild(col);
       matra++;
+      colInRow++;
     }
   }
 
@@ -214,12 +226,15 @@ const taalVibhags = taal && TAALS[taal] ? TAALS[taal].vibhags : null;
   .sargam-grid + .sargam-grid { margin-top: 0.5rem; padding-top: 0.5rem; border-top: 1px dashed var(--border); }
   .sargam-col {
     display: flex; flex-direction: column; align-items: center; justify-content: flex-end;
-    min-width: 2.4rem; padding: 0 0.15rem;
+    min-width: 2rem; padding: 0 0.15rem;
   }
   /* Marks the first beat of each vibhag (clap division) within a cycle, e.g.
      Teentaal's 4+4+4+4 — distinct from the sam highlight and from a section
      separator (which marks an original source line break, not the taal). */
-  .sargam-col.vibhag-start { margin-left: 0.45rem; border-left: 1px solid var(--border); padding-left: 0.35rem; }
+  .sargam-col.vibhag-start { margin-left: 0.4rem; border-left: 1px solid var(--border); padding-left: 0.3rem; }
+  /* A second avartan starting mid-row (two cycles share one line) gets a
+     stronger divider than a plain vibhag, since it's a full cycle boundary. */
+  .sargam-col.cycle-start { margin-left: 0.7rem; border-left: 1px solid var(--accent-soft); padding-left: 0.5rem; }
   .sargam-bol {
     font-size: 0.66rem; letter-spacing: 0.03em; color: var(--muted);
     font-family: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
