@@ -92,8 +92,18 @@ const taalBeats = taal && TAALS[taal] ? TAALS[taal].beats : null;
       return;
     }
 
-    const grid = document.createElement('div');
-    grid.className = 'sargam-grid';
+    // One taal cycle per line: every time the beat count would roll over into a
+    // new avartan, start a fresh row underneath instead of scrolling forever
+    // sideways. With no known taal, there's no cycle length, so it stays one line.
+    const cycleLen = taalBeats && taalBeats.length ? taalBeats.length : 0;
+    let grid;
+    const startLine = () => {
+      grid = document.createElement('div');
+      grid.className = 'sargam-grid';
+      container.appendChild(grid);
+    };
+    startLine();
+
     let matra = 0;
     for (const ev of events) {
       if (ev.type === 'section' || ev.type === 'phrase') {
@@ -102,10 +112,11 @@ const taalBeats = taal && TAALS[taal] ? TAALS[taal].beats : null;
         grid.appendChild(sep);
         continue;
       }
+      if (cycleLen && matra > 0 && matra % cycleLen === 0) startLine();
       const col = document.createElement('div');
       col.className = 'sargam-col';
-      if (taalBeats && taalBeats.length) {
-        const i = matra % taalBeats.length;
+      if (cycleLen) {
+        const i = matra % cycleLen;
         const bol = document.createElement('div');
         bol.className = 'sargam-bol' + (i === 0 ? ' sam' : '');
         bol.textContent = taalBeats[i];
@@ -118,7 +129,6 @@ const taalBeats = taal && TAALS[taal] ? TAALS[taal].beats : null;
       grid.appendChild(col);
       matra++;
     }
-    container.appendChild(grid);
   }
 
   function initNotationView(section) {
@@ -186,6 +196,7 @@ const taalBeats = taal && TAALS[taal] ? TAALS[taal].beats : null;
   .sargam-parse-error { margin: 0; color: #b3452f; font-size: 0.85rem; font-family: var(--font-body); }
 
   .sargam-grid { display: flex; align-items: flex-end; gap: 0; width: max-content; }
+  .sargam-grid + .sargam-grid { margin-top: 0.5rem; padding-top: 0.5rem; border-top: 1px dashed var(--border); }
   .sargam-col {
     display: flex; flex-direction: column; align-items: center; justify-content: flex-end;
     min-width: 2.4rem; padding: 0 0.15rem;
