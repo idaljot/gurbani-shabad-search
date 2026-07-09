@@ -3,15 +3,39 @@ import Layout from '../../layouts/Layout.astro';
 import TablaPlayer from '../../components/TablaPlayer.astro';
 import shabads from '../../data/shabads.json';
 import { RAAGS } from '../../data/raags.js';
+import { bySourceOrder } from '../../data/sources.js';
 
 export function getStaticPaths() {
-  return shabads.map((s) => ({
-    params: { id: s.shabadId },
-    props: { shabad: s },
-  }));
+  // shabads.json's own array order is sorted by ang ALONE across every
+  // source combined (see fetch-base.mjs) — Dasam Granth ang 1 and Vaaran
+  // Bhai Gurdas ang 1 land right next to Guru Granth Sahib Ji's ang 1, even
+  // though they're unrelated angs in different books. Re-sort by source
+  // (canonical order, same as the Source filter elsewhere), then ang, then
+  // original array index as a tiebreaker — that index reflects the crawl's
+  // own reading-order for shabads sharing an ang, since fetch-base.mjs's
+  // final sort is stable and fetch-notation.mjs's merge preserves order.
+  const ordered = shabads
+    .map((s, i) => ({ s, i }))
+    .sort((a, b) => bySourceOrder(a.s.source, b.s.source) || (a.s.ang - b.s.ang) || (a.i - b.i))
+    .map((x) => x.s);
+
+  return ordered.map((s, idx) => {
+    const prev = ordered[idx - 1];
+    const next = ordered[idx + 1];
+    return {
+      params: { id: s.shabadId },
+      props: {
+        shabad: s,
+        // Stay within the same source rather than crossing e.g. from the
+        // last Guru Granth Sahib Ji shabad into the first Dasam Granth one.
+        prevId: prev && prev.source === s.source ? prev.shabadId : null,
+        nextId: next && next.source === s.source ? next.shabadId : null,
+      },
+    };
+  });
 }
 
-const { shabad } = Astro.props;
+const { shabad, prevId, nextId } = Astro.props;
 const hasNotation = Boolean(shabad.sthayi || shabad.antara || shabad.taal || shabad.key || shabad.alaap);
 
 const raagInfo = RAAGS[shabad.raag];
@@ -26,7 +50,21 @@ const hasPlaylist = Boolean(raagInfo && raagInfo.youtubePlaylist);
 const showRaagSection = hasMusicalInfo || hasPlaylist;
 ---
 <Layout title={`${shabad.raag} · ${shabad.writer}`}>
-  <p class="back"><a href="/">&larr; Back to search</a></p>
+  <div class="top-row">
+    <p class="back"><a href="/">&larr; Back to search</a></p>
+    <nav class="shabad-nav compact" aria-label="Adjacent shabads">
+      {prevId ? (
+        <a class="nav-btn" href={`/shabad/${prevId}/`}>&larr; Previous</a>
+      ) : (
+        <span class="nav-btn disabled" aria-disabled="true">&larr; Previous</span>
+      )}
+      {nextId ? (
+        <a class="nav-btn" href={`/shabad/${nextId}/`}>Next &rarr;</a>
+      ) : (
+        <span class="nav-btn disabled" aria-disabled="true">Next &rarr;</span>
+      )}
+    </nav>
+  </div>
 
   <div class="shabad-header">
     <div class="tags">
@@ -122,9 +160,53 @@ const showRaagSection = hasMusicalInfo || hasPlaylist;
     </details>
   )}
 
+  <nav class="shabad-nav bottom" aria-label="Adjacent shabads">
+    {prevId ? (
+      <a class="nav-btn" href={`/shabad/${prevId}/`}>&larr; Previous shabad</a>
+    ) : (
+      <span class="nav-btn disabled" aria-disabled="true">&larr; Previous shabad</span>
+    )}
+    {nextId ? (
+      <a class="nav-btn" href={`/shabad/${nextId}/`}>Next shabad &rarr;</a>
+    ) : (
+      <span class="nav-btn disabled" aria-disabled="true">Next shabad &rarr;</span>
+    )}
+  </nav>
+
   <style>
-    .back { margin: 0 0 1.25rem; }
+    .top-row {
+      display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between;
+      gap: 0.75rem; margin: 0 0 1.25rem;
+    }
+    .back { margin: 0; }
     .back a { color: var(--accent); text-decoration: none; font-size: 0.9rem; }
+
+    .shabad-nav { display: flex; gap: 0.5rem; }
+    .nav-btn {
+      display: inline-block; text-decoration: none;
+      color: var(--accent); background: var(--accent-soft); border: 1px solid transparent;
+      border-radius: 999px; transition: border-color 0.15s;
+    }
+    .nav-btn:hover { border-color: var(--accent); }
+    .nav-btn.disabled {
+      color: var(--muted); background: transparent; border-color: var(--border);
+      opacity: 0.6; cursor: not-allowed;
+    }
+    .shabad-nav.compact .nav-btn { font-size: 0.85rem; font-weight: 500; padding: 0.35rem 0.85rem; }
+
+    /* The end-of-page nav: most people arrive here for the tabla player or
+       notation, not just to read the text, so "done with this page" can
+       happen at any point below — this sits after everything (raag info
+       included) as the natural "what's next" moment, rather than being
+       glued to the bottom of the shabad-text card specifically (which,
+       side-by-side with a taller notation panel, wouldn't even reliably
+       land at the visual end of the page). */
+    .shabad-nav.bottom {
+      justify-content: space-between; margin-top: 2rem; padding-top: 1.5rem;
+      border-top: 1px solid var(--border);
+    }
+    .shabad-nav.bottom .nav-btn { font-size: 0.95rem; font-weight: 600; padding: 0.65rem 1.3rem; }
+
     .shabad-header { margin-bottom: 1.5rem; }
     .tags { display: flex; gap: 0.5rem; flex-wrap: wrap; font-size: 0.78rem; margin-bottom: 0.75rem; }
     .tags span { background: var(--accent-soft); color: var(--accent); padding: 0.15rem 0.6rem; border-radius: 999px; font-weight: 500; }
