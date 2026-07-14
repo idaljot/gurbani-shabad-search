@@ -3,6 +3,10 @@ dist/
 .astro/
 .DS_Store
 
+# Claude Code local, machine-specific settings (personal permission allowlist).
+# Shared team config, if ever needed, goes in .claude/settings.json (tracked).
+.claude/settings.local.json
+
 # Derived from src/data/shabads.json by scripts/build-search-index.mjs
 # (regenerated automatically via the prebuild/predev npm hooks) — same
 # treatment as dist/, not hand-authored source.
