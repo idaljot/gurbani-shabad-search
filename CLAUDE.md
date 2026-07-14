@@ -45,5 +45,7 @@ A Gurbani kirtan notation & search site (Astro static site, no backend), built a
 
 ## Maintenance
 
-At the end of any session where project state changes (branch merged, decision
-resolved, PDFs received), update `SHABADSWAR-CONTEXT.md` and its `Last updated` date.
+When a change alters project state (branch merged, decision resolved, feature
+shipped, PDFs received), update `SHABADSWAR-CONTEXT.md` **in the same commit as
+the change** — not as a deferred end-of-session step — and bump its `Last updated`
+date. For context-heavy tasks, read `SHABADSWAR-CONTEXT.md` before starting.
