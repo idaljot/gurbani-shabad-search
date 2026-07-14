@@ -27,6 +27,17 @@ A Gurbani kirtan notation & search site (Astro static site, no backend), built a
 - **All code changes go through a branch off `main` → review → merge.** No direct
   commits to `main` for code. Data-only notation publishes may go direct-to-main
   after review.
+- **Merge method by change type** (`main` auto-deploys to Cloudflare Pages, so
+  `main` = production):
+  - Docs/config only, already eyeballed (e.g. `CLAUDE.md`, context file,
+    `.gitignore`) → fast-forward merge locally is fine, no PR needed.
+  - Anything users see — notation rendering, search, layout, crawl/schema
+    changes → **open a PR and verify the Cloudflare preview deploy before
+    merging.** Never fast-forward user-facing changes straight to `main`.
+  - Reviewed notation-data publishes (via `publish-notation`, which has its own
+    pre-publish review gate) are exempt and may go direct-to-main.
+  - When a change needs review, the Cloudflare preview link is already posted on
+    the PR — share it with the reviewer.
 - **Never guess notation.** Human-gated decisions (e.g. the Ma swar convention)
   must be confirmed by Ustaad ji before encoding — leave them open, don't invent.
 - Keep the crawl (infrequent) decoupled from notation merging, with a
