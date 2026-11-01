@@ -48,6 +48,12 @@ rather than just approximation targets for other syllables. Freesound lists
 this pack under **Creative Commons 0** (CC0 — public domain, no attribution
 legally required), credited here anyway as good practice.
 
+`public/tabla/tun-2.wav`, `tun-3.wav` and `te-2.wav` are extra takes from the
+same mmiron pack (files [130419](https://freesound.org/s/130419/),
+[130420](https://freesound.org/s/130420/) and
+[130418](https://freesound.org/s/130418/)), added 2026-11-01 so the player
+can rotate between takes. Same CC0 license.
+
 The `Tone.MembraneSynth` synthesized placeholder in
 `src/components/TablaPlayer.astro` is still used as an automatic fallback for
 any bol whose sample file is missing, so the player degrades gracefully
@@ -57,6 +63,12 @@ rather than going silent.
 from either pack above and has no documented source — see
 `public/tabla/README.md`. Confirm its license before treating it as covered
 by the credits on this page.
+
+## Tanpura drone
+
+The tanpura in the tabla player is synthesized in the browser with Tone.js
+(`src/components/TablaPlayer.astro`) — no recorded samples, so no third-party
+audio license applies.
 
 ## Available but unused
 

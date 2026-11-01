@@ -58,7 +58,11 @@ page carries a canonical link to shabadnotes.com.
 - Gurmukhi first-letter search (GurbaniAkhar keyset, Roman→Gurmukhi
   conversion), matching from line start rather than anywhere in the line
 - Per-shabad detail pages, now with next/previous shabad navigation
-- Tabla player (Tone.js + self-hosted CC0 samples)
+- Tabla player (Tone.js + self-hosted CC0 samples), rotating between takes of
+  a bol with slight per-stroke variation; synthesized tanpura drone whose Sa
+  follows the shabad's Key (first string Pa/Ma/Ni selectable). Naad's sample
+  library (MIT) was evaluated 2026-11-01 but not used: its takes come from
+  tablas tuned to different pitches.
 - Raag reference pages with YouTube playlists from @GurmatSangeetTutorials,
   including an "About this Raag" section (time-period disclaimer + review
   badge) and reconciled seed data

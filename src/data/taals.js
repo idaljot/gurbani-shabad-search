@@ -121,3 +121,14 @@ export const BOL_ALIASES = {
 };
 
 export const BASE_BOLS = ['dha', 'dhin', 'na', 'tin', 'ta', 'ge', 'ke', 'tun', 'te'];
+
+// How many recorded takes each base bol has in public/tabla/: take 1 is
+// `<bol>.wav`, take n is `<bol>-<n>.wav`. The player rotates between takes
+// (never the same one twice in a row) so repeated strokes don't sound
+// machine-identical. Only list takes recorded on the same tabla as take 1 —
+// mixing drums tuned to different pitches sounds worse than no variation.
+// Bols not listed have a single take.
+export const SAMPLE_TAKES = {
+  tun: 3, // mmiron 130416, 130419, 130420 (all ~D#4)
+  te: 2,  // mmiron 130429, 130418 (both ~A#3)
+};

@@ -6,6 +6,7 @@ const {
   variant = 'embedded',
   presetTaal,
   presetTempo,
+  presetKey,
 } = Astro.props;
 
 const taalNames = Object.keys(TAALS);
@@ -23,6 +24,18 @@ const isFloating = variant === 'floating';
 // calls just replace it with identical content — no reflow.
 const initialTaal = TAALS[selectDefault];
 const initialTempo = presetTempo || initialTaal.defaultTempo;
+
+// Tanpura Sa: the shabad's Key field ("C#", "Bb", …) when it parses as a
+// note name, else C.
+const KEY_NAMES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
+const FLATS = { Db: 'C#', Eb: 'D#', Gb: 'F#', Ab: 'G#', Bb: 'A#' };
+function parseKey(raw) {
+  const m = String(raw || '').trim().match(/^([A-Ga-g])\s*([#b♯♭])?/);
+  if (!m) return null;
+  const name = m[1].toUpperCase() + ({ '#': '#', '♯': '#', b: 'b', '♭': 'b' }[m[2]] || '');
+  return FLATS[name] || (KEY_NAMES.includes(name) ? name : null);
+}
+const initialKey = parseKey(presetKey) || 'C';
 ---
 
 <div
@@ -31,6 +44,7 @@ const initialTempo = presetTempo || initialTaal.defaultTempo;
   id={id}
   data-preset-taal={presetTaal && TAALS[presetTaal] ? presetTaal : undefined}
   data-preset-tempo={presetTempo || undefined}
+  data-preset-key={parseKey(presetKey) || undefined}
 >
   {isFloating && (
     <div class="tabla-header" data-role="header">
@@ -69,6 +83,24 @@ const initialTempo = presetTempo || initialTaal.defaultTempo;
         <input type="checkbox" data-role="bell-toggle" /> Bell on beat 1
       </label>
       <button type="button" class="tabla-fullscreen-btn" data-role="fullscreen" aria-label="Fullscreen mode">&#9974;</button>
+    </div>
+
+    <div class="tabla-tanpura-row">
+      <button type="button" class="tabla-tanpura-btn" data-role="tanpura-toggle" aria-pressed="false">Tanpura</button>
+      <label>
+        Sa
+        <select class="tabla-select tabla-select--small" data-role="tanpura-key" aria-label="Tanpura key (Sa)">
+          {KEY_NAMES.map((k) => <option value={k} selected={k === initialKey}>{k}</option>)}
+        </select>
+      </label>
+      <label>
+        1st string
+        <select class="tabla-select tabla-select--small" data-role="tanpura-first" aria-label="Tanpura first string">
+          <option value="P" selected>Pa</option>
+          <option value="M">Ma</option>
+          <option value="N">Ni</option>
+        </select>
+      </label>
     </div>
 
     <div class="tabla-visualizer" data-role="visualizer">
@@ -176,6 +208,41 @@ const initialTempo = presetTempo || initialTaal.defaultTempo;
     font-size: 0.8rem;
     color: var(--muted, #7a7068);
     white-space: nowrap;
+  }
+  .tabla-tanpura-row {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    flex-wrap: wrap;
+    margin: 0.6rem 0 0.4rem;
+    font-size: 0.8rem;
+    color: var(--muted, #7a7068);
+  }
+  .tabla-tanpura-row label {
+    display: flex;
+    align-items: center;
+    gap: 0.3rem;
+    white-space: nowrap;
+  }
+  .tabla-select--small {
+    font-size: 0.8rem;
+    padding: 0.15rem 0.35rem;
+  }
+  .tabla-tanpura-btn {
+    font: inherit;
+    font-size: 0.8rem;
+    font-weight: 600;
+    padding: 0.25rem 0.75rem;
+    border-radius: 999px;
+    border: 1px solid var(--border, #e5dccb);
+    background: #fff;
+    color: var(--accent, #b5651d);
+    cursor: pointer;
+  }
+  .tabla-tanpura-btn[aria-pressed="true"] {
+    background: var(--accent, #b5651d);
+    border-color: var(--accent, #b5651d);
+    color: #fff;
   }
 
   .tabla-beat-count {
@@ -400,7 +467,7 @@ const initialTempo = presetTempo || initialTaal.defaultTempo;
 </style>
 
 <script>
-  import { TAALS, DEFAULT_TAAL, BOL_ALIASES, BASE_BOLS } from '../data/taals.js';
+  import { TAALS, DEFAULT_TAAL, BOL_ALIASES, BASE_BOLS, SAMPLE_TAKES } from '../data/taals.js';
 
   const PITCHES = {
     dha: 'A1',
@@ -422,16 +489,41 @@ const initialTempo = presetTempo || initialTaal.defaultTempo;
   let bellEnabled = false;
   let bellBuffer = null;
   const synths = {};
+  // base bol -> array of loaded takes (sparse until each take loads)
   const sampleBuffers = {};
+  const lastTake = {};
   const instances = [];
+
+  function loadTake(base, n) {
+    const file = n === 1 ? `/tabla/${base}.wav` : `/tabla/${base}-${n}.wav`;
+    return window.Tone.ToneAudioBuffer.load(file)
+      .then((buffer) => { (sampleBuffers[base] ||= [])[n - 1] = buffer; })
+      .catch(() => {});
+  }
 
   // Real recordings win when present (see public/tabla/README.md); any bol
   // without a matching file falls back to the synthesized placeholder below.
-  BASE_BOLS.forEach((base) => {
-    window.Tone.ToneAudioBuffer.load(`/tabla/${base}.wav`)
-      .then((buffer) => { sampleBuffers[base] = buffer; })
-      .catch(() => {});
-  });
+  // Take 1 of each bol loads with the page; extra takes only load once
+  // someone actually presses play, so idle page views don't pay for them.
+  BASE_BOLS.forEach((base) => loadTake(base, 1));
+  let extraTakesRequested = false;
+  function loadExtraTakes() {
+    if (extraTakesRequested) return;
+    extraTakesRequested = true;
+    Object.entries(SAMPLE_TAKES).forEach(([base, count]) => {
+      for (let n = 2; n <= count; n++) loadTake(base, n);
+    });
+  }
+
+  // Random loaded take, avoiding the one used last time for this bol.
+  function pickTake(base) {
+    const takes = (sampleBuffers[base] || []).map((b, i) => (b ? i : -1)).filter((i) => i >= 0);
+    if (takes.length === 0) return null;
+    const options = takes.length > 1 ? takes.filter((i) => i !== lastTake[base]) : takes;
+    const i = options[Math.floor(Math.random() * options.length)];
+    lastTake[base] = i;
+    return sampleBuffers[base][i];
+  }
 
   window.Tone.ToneAudioBuffer.load('/tabla/bell.wav')
     .then((buffer) => { bellBuffer = buffer; })
@@ -456,14 +548,93 @@ const initialTempo = presetTempo || initialTaal.defaultTempo;
 
   function triggerBol(bol, time) {
     const base = BOL_ALIASES[bol] || bol.toLowerCase();
-    if (sampleBuffers[base]) {
-      const player = new window.Tone.Player(sampleBuffers[base]).toDestination();
+    const buffer = pickTake(base);
+    if (buffer) {
+      const player = new window.Tone.Player(buffer).toDestination();
+      // Tiny per-stroke variation (±~7 cents, ±1.5 dB), like a real hand.
+      player.playbackRate = 1 + (Math.random() * 2 - 1) * 0.004;
+      player.volume.value = (Math.random() * 2 - 1) * 1.5;
       player.onstop = () => player.dispose();
       player.start(time);
     } else {
       const { synth } = getSynth(bol);
       synth.triggerAttackRelease(PITCHES[base] || 'C2', '8n', time);
     }
+  }
+
+  // ---- Tanpura drone -------------------------------------------------------
+  // Synthesized (no samples, so no licensing) and independent of the tabla:
+  // it has its own clock, so it can play alone or under the theka at any
+  // tempo. Classic 4-string pattern: first string (mandra Pa, or Ma/Ni for
+  // raags without Pa), Sa, Sa, kharaj Sa (an octave below), then a pause.
+  const FIRST_STRING_OFFSET = { P: -5, M: -7, N: -1 }; // semitones from Sa
+  const NOTE_INDEX = { C: 0, 'C#': 1, D: 2, 'D#': 3, E: 4, F: 5, 'F#': 6, G: 7, 'G#': 8, A: 9, 'A#': 10, B: 11 };
+  const TANPURA_TICK = 0.25; // seconds
+  const TANPURA_PLUCKS = { 0: 'first', 5: 'sa', 9: 'sa', 13: 'kharaj' }; // tick -> string
+  const TANPURA_CYCLE = 20; // ticks (5 s)
+  let tanpuraKey = 'C';
+  let tanpuraFirst = 'P';
+  let tanpuraOn = false;
+  let tanpuraSynth = null;
+  let tanpuraClock = null;
+  let tanpuraTick = 0;
+
+  function tanpuraFreq(string) {
+    // Sa in the octave starting at C3 (~131–247 Hz), a comfortable range.
+    const sa = 130.81 * Math.pow(2, NOTE_INDEX[tanpuraKey] / 12);
+    const semis = { first: FIRST_STRING_OFFSET[tanpuraFirst], sa: 0, kharaj: -12 }[string];
+    return sa * Math.pow(2, semis / 12);
+  }
+
+  function ensureTanpura() {
+    if (tanpuraSynth) return;
+    const Tone = window.Tone;
+    // Bright, slowly decaying string: many harmonics, gently low-passed, with
+    // a little reverb so plucks overlap into a continuous drone.
+    const reverb = new Tone.Reverb({ decay: 4, wet: 0.35 }).toDestination();
+    const filter = new Tone.Filter(2200, 'lowpass').connect(reverb);
+    tanpuraSynth = new Tone.PolySynth(Tone.Synth, {
+      oscillator: { type: 'custom', partials: [1, 0.7, 0.55, 0.45, 0.4, 0.32, 0.27, 0.22, 0.18, 0.15, 0.12, 0.1, 0.08, 0.06] },
+      envelope: { attack: 0.015, decay: 3.5, sustain: 0.15, release: 3 },
+      volume: -16,
+    }).connect(filter);
+    tanpuraSynth.maxPolyphony = 12;
+    tanpuraClock = new Tone.Clock((time) => {
+      const string = TANPURA_PLUCKS[tanpuraTick % TANPURA_CYCLE];
+      tanpuraTick++;
+      if (string) {
+        const detune = 1 + (Math.random() * 2 - 1) * 0.0015;
+        tanpuraSynth.triggerAttackRelease(tanpuraFreq(string) * detune, 3.5, time);
+      }
+    }, 1 / TANPURA_TICK);
+  }
+
+  async function toggleTanpura() {
+    await window.Tone.start();
+    ensureTanpura();
+    tanpuraOn = !tanpuraOn;
+    if (tanpuraOn) {
+      tanpuraTick = 0;
+      tanpuraClock.start();
+    } else {
+      tanpuraClock.stop();
+      tanpuraSynth.releaseAll();
+    }
+    instances.forEach((inst) => {
+      if (inst.tanpuraBtn) inst.tanpuraBtn.setAttribute('aria-pressed', String(tanpuraOn));
+    });
+  }
+
+  function setTanpuraKey(key) {
+    if (!(key in NOTE_INDEX)) return;
+    tanpuraKey = key;
+    instances.forEach((inst) => { if (inst.tanpuraKeySelect) inst.tanpuraKeySelect.value = key; });
+  }
+
+  function setTanpuraFirst(first) {
+    if (!(first in FIRST_STRING_OFFSET)) return;
+    tanpuraFirst = first;
+    instances.forEach((inst) => { if (inst.tanpuraFirstSelect) inst.tanpuraFirstSelect.value = first; });
   }
 
   function renderBeats(beatsEl, taalName) {
@@ -577,6 +748,7 @@ const initialTempo = presetTempo || initialTaal.defaultTempo;
 
   async function togglePlay() {
     await window.Tone.start();
+    loadExtraTakes();
     if (!sequence) rebuildSequence();
     if (isPlaying) {
       window.Tone.Transport.stop();
@@ -665,6 +837,9 @@ const initialTempo = presetTempo || initialTaal.defaultTempo;
       fsTempoValue: el.querySelector('[data-role="fs-tempo-value"]'),
       bellToggle: el.querySelector('[data-role="bell-toggle"]'),
       fsBellToggle: el.querySelector('[data-role="fs-bell-toggle"]'),
+      tanpuraBtn: el.querySelector('[data-role="tanpura-toggle"]'),
+      tanpuraKeySelect: el.querySelector('[data-role="tanpura-key"]'),
+      tanpuraFirstSelect: el.querySelector('[data-role="tanpura-first"]'),
     };
     instances.push(inst);
     inst.playBtn.addEventListener('click', togglePlay);
@@ -678,6 +853,9 @@ const initialTempo = presetTempo || initialTaal.defaultTempo;
     if (inst.fsTempoRange) inst.fsTempoRange.addEventListener('input', (e) => setTempo(Number(e.target.value)));
     if (inst.bellToggle) inst.bellToggle.addEventListener('change', (e) => setBellEnabled(e.target.checked));
     if (inst.fsBellToggle) inst.fsBellToggle.addEventListener('change', (e) => setBellEnabled(e.target.checked));
+    if (inst.tanpuraBtn) inst.tanpuraBtn.addEventListener('click', toggleTanpura);
+    if (inst.tanpuraKeySelect) inst.tanpuraKeySelect.addEventListener('change', (e) => setTanpuraKey(e.target.value));
+    if (inst.tanpuraFirstSelect) inst.tanpuraFirstSelect.addEventListener('change', (e) => setTanpuraFirst(e.target.value));
   });
 
   const presetEl = document.querySelector('[data-tabla-player][data-preset-taal]');
@@ -685,4 +863,5 @@ const initialTempo = presetTempo || initialTaal.defaultTempo;
   const initTempo = Number(presetEl?.dataset.presetTempo) || TAALS[initTaal]?.defaultTempo || 90;
   setTaal(initTaal);
   setTempo(initTempo);
+  setTanpuraKey(document.querySelector('[data-tabla-player][data-preset-key]')?.dataset.presetKey || 'C');
 </script>

@@ -4,6 +4,12 @@
 `tun.wav`, `te.wav` are the bols the player loads. See `CREDITS.md` at the
 repo root for sourcing and licensing.
 
+Extra takes of a bol are named `<bol>-2.wav`, `<bol>-3.wav`, … and listed in
+`SAMPLE_TAKES` in `src/data/taals.js`; the player rotates between takes so
+repeated strokes don't sound identical, and only loads them on first play.
+Currently: `tun-2.wav`, `tun-3.wav`, `te-2.wav` (same mmiron recordings as
+`tun.wav`/`te.wav`). Only add takes recorded on the same tabla as take 1.
+
 The player checks for these at page load and automatically uses whichever
 ones it finds — any bol without a matching file falls back to a synthesized
 placeholder, so files can be replaced or added one at a time with no code
