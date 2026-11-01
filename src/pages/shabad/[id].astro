@@ -54,7 +54,7 @@ const showRaagSection = hasMusicalInfo || hasPlaylist;
 const titleLine = (shabad.previewLine || shabad.firstLine || '')
   .replace(/[\s॥।੦-੯]*(ਰਹਾਉ[\s॥।੦-੯]*)?$/u, '')
   .trim();
-const pageTitle = [titleLine, shabad.raag, 'Gurbani Kirtan Swar Notation'].filter(Boolean).join(' · ');
+const pageTitle = [titleLine, shabad.raag, 'Shabad Notes'].filter(Boolean).join(' · ');
 ---
 <Layout title={pageTitle}>
   <div class="top-row">

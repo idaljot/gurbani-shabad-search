@@ -1,4 +1,4 @@
-# Gurbani Kirtan Swar Notation
+# Shabad Notes (shabadnotes.com)
 
 A searchable, filterable database of Shabads for your music class — filter by Raag, Writer, and Taal.
 
