@@ -229,6 +229,9 @@ const pageTitle = [titleLine, shabad.raag, 'Gurbani Kirtan Swar Notation'].filte
     .panels.one { grid-template-columns: 1fr; }
     @media (max-width: 700px) {
       .panels.two { grid-template-columns: 1fr; }
+      /* Stacked on a phone, notation first — otherwise you scroll past the
+         whole shabad text before reaching the sthayi. */
+      .panels.two .notation-panel { order: -1; }
     }
 
     section h2 {
