@@ -4,6 +4,9 @@ const {
   title = 'Shabad Notes — Gurbani Kirtan Notation',
   description = 'Search Gurbani shabads by typing the first letters of each word, browse by raag or writer, and view sur/taal notation for kirtan.',
 } = Astro.props;
+// Always point at shabadnotes.com, even when served from the old
+// *.pages.dev address, so search engines index one copy of each page.
+const canonicalUrl = new URL(Astro.url.pathname, Astro.site);
 ---
 <!doctype html>
 <html lang="en">
@@ -12,6 +15,7 @@ const {
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>{title}</title>
     <meta name="description" content={description} />
+    <link rel="canonical" href={canonicalUrl} />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <!-- Self-hosted (Tone.js 14.8.49; was loaded from a CDN) — see
          public/vendor/tone.js.LICENSE.txt for the MIT license header that
