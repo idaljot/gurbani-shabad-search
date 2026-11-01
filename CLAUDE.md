@@ -1,4 +1,4 @@
-# CLAUDE.md — ShabadSwar.com
+# CLAUDE.md — ShabadNotes.com
 
 Operating instructions for AI sessions in this repo. Keep this file lean and stable.
 
