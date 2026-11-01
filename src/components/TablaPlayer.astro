@@ -400,7 +400,7 @@ const initialTempo = presetTempo || initialTaal.defaultTempo;
 </style>
 
 <script>
-  import { TAALS, DEFAULT_TAAL, BOL_ALIASES, BASE_BOLS } from '../data/taals.js';
+  import { TAALS, DEFAULT_TAAL, BOL_ALIASES, BASE_BOLS, SAMPLE_TAKES } from '../data/taals.js';
 
   const PITCHES = {
     dha: 'A1',
@@ -422,16 +422,41 @@ const initialTempo = presetTempo || initialTaal.defaultTempo;
   let bellEnabled = false;
   let bellBuffer = null;
   const synths = {};
+  // base bol -> array of loaded takes (sparse until each take loads)
   const sampleBuffers = {};
+  const lastTake = {};
   const instances = [];
+
+  function loadTake(base, n) {
+    const file = n === 1 ? `/tabla/${base}.wav` : `/tabla/${base}-${n}.wav`;
+    return window.Tone.ToneAudioBuffer.load(file)
+      .then((buffer) => { (sampleBuffers[base] ||= [])[n - 1] = buffer; })
+      .catch(() => {});
+  }
 
   // Real recordings win when present (see public/tabla/README.md); any bol
   // without a matching file falls back to the synthesized placeholder below.
-  BASE_BOLS.forEach((base) => {
-    window.Tone.ToneAudioBuffer.load(`/tabla/${base}.wav`)
-      .then((buffer) => { sampleBuffers[base] = buffer; })
-      .catch(() => {});
-  });
+  // Take 1 of each bol loads with the page; extra takes only load once
+  // someone actually presses play, so idle page views don't pay for them.
+  BASE_BOLS.forEach((base) => loadTake(base, 1));
+  let extraTakesRequested = false;
+  function loadExtraTakes() {
+    if (extraTakesRequested) return;
+    extraTakesRequested = true;
+    Object.entries(SAMPLE_TAKES).forEach(([base, count]) => {
+      for (let n = 2; n <= count; n++) loadTake(base, n);
+    });
+  }
+
+  // Random loaded take, avoiding the one used last time for this bol.
+  function pickTake(base) {
+    const takes = (sampleBuffers[base] || []).map((b, i) => (b ? i : -1)).filter((i) => i >= 0);
+    if (takes.length === 0) return null;
+    const options = takes.length > 1 ? takes.filter((i) => i !== lastTake[base]) : takes;
+    const i = options[Math.floor(Math.random() * options.length)];
+    lastTake[base] = i;
+    return sampleBuffers[base][i];
+  }
 
   window.Tone.ToneAudioBuffer.load('/tabla/bell.wav')
     .then((buffer) => { bellBuffer = buffer; })
@@ -456,8 +481,12 @@ const initialTempo = presetTempo || initialTaal.defaultTempo;
 
   function triggerBol(bol, time) {
     const base = BOL_ALIASES[bol] || bol.toLowerCase();
-    if (sampleBuffers[base]) {
-      const player = new window.Tone.Player(sampleBuffers[base]).toDestination();
+    const buffer = pickTake(base);
+    if (buffer) {
+      const player = new window.Tone.Player(buffer).toDestination();
+      // Tiny per-stroke variation (±~7 cents, ±1.5 dB), like a real hand.
+      player.playbackRate = 1 + (Math.random() * 2 - 1) * 0.004;
+      player.volume.value = (Math.random() * 2 - 1) * 1.5;
       player.onstop = () => player.dispose();
       player.start(time);
     } else {
@@ -577,6 +606,7 @@ const initialTempo = presetTempo || initialTaal.defaultTempo;
 
   async function togglePlay() {
     await window.Tone.start();
+    loadExtraTakes();
     if (!sequence) rebuildSequence();
     if (isPlaying) {
       window.Tone.Transport.stop();
