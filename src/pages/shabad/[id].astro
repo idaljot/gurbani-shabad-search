@@ -95,6 +95,7 @@ const pageTitle = [titleLine, shabad.raag, 'Shabad Notes'].filter(Boolean).join(
     variant="embedded"
     presetTaal={shabad.taal || 'Teentaal'}
     presetTempo={shabad.tempo || 80}
+    presetKey={shabad.key}
   />
 
   <div class={hasNotation ? 'panels two' : 'panels one'}>

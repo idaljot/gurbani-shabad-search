@@ -64,6 +64,12 @@ from either pack above and has no documented source — see
 `public/tabla/README.md`. Confirm its license before treating it as covered
 by the credits on this page.
 
+## Tanpura drone
+
+The tanpura in the tabla player is synthesized in the browser with Tone.js
+(`src/components/TablaPlayer.astro`) — no recorded samples, so no third-party
+audio license applies.
+
 ## Available but unused
 
 The rest of `sample-sources/8162__mmiron__tabla-bols/` (mmiron, CC0, same
