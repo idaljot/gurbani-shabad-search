@@ -57,9 +57,21 @@ function parseCSV(text) {
 
 // Google Forms writes its own locale timestamp format into this column;
 // normalize to ISO so the homepage can sort "recently notated" shabads.
-function parseTimestamp(raw) {
+// The sheet's locale is day-first ("06/07/2026 00:54:03" = 6 July), which
+// `new Date()` would misread as month-first (June 7), so parse it explicitly.
+// Anything else (e.g. ISO) falls back to `new Date()`.
+export function parseTimestamp(raw) {
   if (!raw) return null;
-  const d = new Date(raw);
+  const m = raw.trim().match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})(?:\s+(\d{1,2}):(\d{2})(?::(\d{2}))?)?$/);
+  let d;
+  if (m) {
+    const [, day, month, year, hh = 0, mm = 0, ss = 0] = m.map((v) => v && Number(v));
+    d = new Date(year, month - 1, day, hh, mm, ss);
+    // Reject impossible dates (e.g. 31/02) rather than letting them roll over.
+    if (d.getDate() !== day || d.getMonth() !== month - 1) return null;
+  } else {
+    d = new Date(raw);
+  }
   return Number.isNaN(d.getTime()) ? null : d.toISOString();
 }
 
