@@ -18,11 +18,14 @@ notation searchable and accessible to the kirtan community.
 Domain decision: **shabadnotes.com** (bought 2026-11-01 via Cloudflare Registrar,
 live on Cloudflare Pages; `www` 301-redirects to the apex). Site renamed
 "Gurbani Kirtan Swar Notation" → **Shabad Notes**. This reverses the earlier
-choice of ShabadSwar.com (which Ustaad ji's son had confirmed — let him know),
-mainly for spelling/memorability ("swar" vs svar/sur) and because "notes" is the
-everyday word students search. shabadswar.com was never bought.
-The old `gurbani-shabad-search.pages.dev` address still serves the site; every
-page carries a canonical link to shabadnotes.com.
+choice of ShabadSwar.com (which Ustaad ji's son had confirmed; Daljot chose not
+to re-consult since the project had been dormant for months), mainly for
+spelling/memorability ("swar" vs svar/sur) and because "notes" is the everyday
+word students search. shabadswar.com was never bought.
+The old `gurbani-shabad-search.pages.dev` address 301-redirects to
+shabadnotes.com (Cloudflare Bulk Redirect, path + query preserved, subdomains
+**not** included so PR preview URLs keep working). Every page also carries a
+canonical link to shabadnotes.com (`site` set in `astro.config.mjs`).
 
 ## People
 
@@ -35,12 +38,15 @@ page carries a canonical link to shabadnotes.com.
 ## Stack
 
 - **Framework:** Astro (static site, no backend) — v5
-- **Deploy:** VS Code → GitHub → Cloudflare Pages
+- **Deploy:** VS Code → GitHub → Cloudflare Pages (project `gurbani-shabad-search`;
+  `main` = production at shabadnotes.com). Each PR gets a preview at
+  `https://<branch>.gurbani-shabad-search.pages.dev` — the branch alias is
+  truncated to 28 characters, so long branch names get cut off.
 - **Data source:** GurbaniNow API — four sources, ~12,000 shabads total
   (Guru Granth Sahib Ji, Sri Dasam Granth, Vaaran Bhai Gurdas Ji, Bhai Nand
   Lal Ji)
 - **Search reference:** SikhiToTheMax conventions; GurbaniAkhar keyset
-- **Audio:** Tone.js tabla player, CC0 samples, all runtime assets self-hosted
+- **Audio:** Tone.js tabla player + synthesized tanpura, all runtime assets self-hosted
 - **Typography:** Fraunces serif (display), self-hosted Google Fonts
 
 ### Key scripts (package.json)
@@ -60,9 +66,11 @@ page carries a canonical link to shabadnotes.com.
 - Per-shabad detail pages, now with next/previous shabad navigation
 - Tabla player (Tone.js + self-hosted CC0 samples), rotating between takes of
   a bol with slight per-stroke variation; synthesized tanpura drone whose Sa
-  follows the shabad's Key (first string Pa/Ma/Ni selectable). Naad's sample
-  library (MIT) was evaluated 2026-11-01 but not used: its takes come from
-  tablas tuned to different pitches.
+  follows the shabad's Key (first string Pa/Ma/Ni selectable; controls in both
+  normal and fullscreen views). Beat-1 bell played 10 dB down and cut after
+  ~1.1 s. Extra takes are listed in `SAMPLE_TAKES` (`taals.js`) and must come
+  from the same tabla as take 1. Naad's sample library (MIT) was evaluated
+  2026-11-01 but not used: its takes come from tablas tuned to different pitches.
 - Raag reference pages with YouTube playlists from @GurmatSangeetTutorials,
   including an "About this Raag" section (time-period disclaimer + review
   badge) and reconciled seed data
@@ -91,7 +99,7 @@ page carries a canonical link to shabadnotes.com.
 - Fixed: concurrency race condition in the base-text crawl (~800 shabads had
   out-of-order lines) — see `crawl-ordering-fix-2026-07-06.md`
 
-## In progress — `feat-sargam-notation` branch (UNMERGED, 1 commit behind `main`)
+## In progress — `feat-sargam-notation` branch (UNMERGED, 23 commits behind `main`)
 
 Substantially further along than "spec + parser" — notation actually renders
 on shabad pages now, gated only on review:
@@ -112,7 +120,9 @@ on shabad pages now, gated only on review:
 - **Blocked on:** Baljeet's review of notation presentation, cycles-per-line
   display, and data-entry conventions
 - **Needs a rebase before merging** — its last commit is 2026-07-08; `main`
-  has since moved 1 commit ahead (next/previous shabad navigation)
+  is 23 commits ahead as of 2026-11-01 (incl. the Shabad Notes rename, page
+  titles, mobile notation order and tabla/tanpura changes to `[id].astro` and
+  `TablaPlayer.astro`), so expect conflicts
 
 ## Resolved / recent
 
@@ -125,6 +135,43 @@ on shabad pages now, gated only on review:
   `m`=shuddh, so meaning inverts if not migrated.
 - **Ustaad ji's notation PDFs received** (via Anmol) — extraction underway in the separate
   `gurmat-sangeet-data` repo (see that repo's `CLAUDE.md`).
+
+## Notation intake from local files (workflow used 2026-11-01)
+
+`publish-notation` only reads the Google Sheet (it rebuilds `shabads.json` from
+it every run), so local notation files go **into the Sheet**, never straight
+into `shabads.json`:
+
+1. Read the files; match each shabad to its ID by searching Gurmukhi text in
+   `src/data/shabads-base.json` (title transliterations are loose — confirm
+   ambiguous matches with Daljot rather than guessing).
+2. Write a TSV in the Sheet's column order — `Timestamp` (day-first,
+   `dd/mm/yyyy hh:mm:ss`), `Shabad ID`, `Sthayi notation`, `Antara notation`,
+   `Alaap notation`, `Pitch/Key`, `Taal` (use the spellings in `taals.js`, e.g.
+   `Kaherva`), `Tempo` — plus a review-notes file listing typos, "or"
+   alternatives and anything left out.
+3. Daljot imports it: Sheet → File → Import → Append, tab-separated.
+4. Dry run: `echo n | npm run publish-notation` shows the diff. **Then discard
+   the regenerated file** (`git checkout -- src/data/shabads.json`), otherwise
+   the real run sees "no changes" and won't commit.
+5. Real run with `y` commits `shabads.json` and pushes to `main` (allowed for
+   reviewed data).
+
+The 2026-11-01 source files and `prepared/REVIEW-NOTES.md` are in
+`~/Downloads/notations/` on Daljot's machine.
+
+## Known data issues / follow-ups
+
+- Published with open items (2026-11-01 batch): "or" alternatives in JL4, MKT,
+  UKQ; suspected typos `GGGGGGG` (QSM), `S'N'S'` + `PPPPP` (ET9), `S'S''S'S'`
+  (MFC); `*`/`**`/`->` markers unexplained; Shant Payi (2D9) has no taal
+  ("Kehrwa/teentaal" in source). Satgur Sacha Patsaho mapped to `9M6`
+  (Vaar 11) by Daljot.
+- Kavan Bani (JK3): live taal is Kaherva, Daljot's notation doc says Rupak.
+- Naam Na Janeya notation sits on `BT3` (end of Bachittar Natak ch. 5) —
+  confirm that's the intended shabad.
+- `public/tabla/bell.wav` has no documented source/license (see `CREDITS.md`);
+  could be replaced by a synthesized bell.
 
 ## Open decisions (need a human — do not guess)
 
