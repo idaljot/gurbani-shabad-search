@@ -556,9 +556,13 @@ const initialKey = parseKey(presetKey) || 'C';
 
   function triggerBell(time) {
     if (!bellBuffer) return;
+    // The recording rings for ~6 s at full level, which drowns the theka;
+    // play it softer and cut it after ~1 s with a short fade.
     const player = new window.Tone.Player(bellBuffer).toDestination();
+    player.volume.value = -10;
+    player.fadeOut = 0.35;
     player.onstop = () => player.dispose();
-    player.start(time);
+    player.start(time, 0, 1.1);
   }
 
   function getSynth(bol) {
