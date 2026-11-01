@@ -8,7 +8,7 @@ const raags = [...new Set(searchIndex.map((s) => s.raag))].sort();
 const writers = [...new Set(searchIndex.map((s) => s.writer))].sort();
 const taals = [...new Set(searchIndex.map((s) => s.taal).filter(Boolean))].sort();
 ---
-<Layout title="Browse All Shabads · Gurbani Kirtan Swar Notation">
+<Layout title="Browse All Shabads · Shabad Notes">
   <p class="back"><a href="/">&larr; Back to search</a></p>
   <h1>Browse All Shabads</h1>
   <p class="subtitle">{searchIndex.length} shabads total &mdash; filter to narrow the list</p>

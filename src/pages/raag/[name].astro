@@ -54,7 +54,7 @@ const hasPlaylist = Boolean(raagInfo && raagInfo.youtubePlaylist);
 const status = (raagInfo && raagInfo.status) || 'draft';
 const isApproved = status === 'approved';
 ---
-<Layout title={`${name} · Gurbani Kirtan Swar Notation`}>
+<Layout title={`${name} · Shabad Notes`}>
   <p class="back"><a href="/">&larr; Back to search</a></p>
   <h1>{name}</h1>
   <p class="subtitle">{raagShabads.length} shabad{raagShabads.length === 1 ? '' : 's'}</p>

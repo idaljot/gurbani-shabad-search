@@ -1,11 +1,11 @@
-# ShabadSwar.com — Project Context Anchor
+# ShabadNotes.com — Project Context Anchor
 
 > Portable source-of-truth for the Gurbani kirtan notation & search site.
 > This file is version-controlled and independent of any chat or project memory.
 > Update the relevant section at the end of any session where something meaningful
 > changes. Point new chats at this file instead of re-pasting history.
 
-_Last updated: 2026-07-14_
+_Last updated: 2026-11-01_
 
 ---
 
@@ -15,9 +15,14 @@ A Gurbani kirtan notation and search website, built as a *seva* project for
 Daljot's music class. It makes Ustaad Bhai Jaspal Singh Ji's raag and sargam
 notation searchable and accessible to the kirtan community.
 
-Domain decision: **ShabadSwar.com** was kept despite the "swar"-over-the-phone
-concern (mishearing/misspelling). Considered and set aside: ShabadSur, ShabadNotes,
-ShabadSargam, GurbaniSargam.
+Domain decision: **shabadnotes.com** (bought 2026-11-01 via Cloudflare Registrar,
+live on Cloudflare Pages; `www` 301-redirects to the apex). Site renamed
+"Gurbani Kirtan Swar Notation" → **Shabad Notes**. This reverses the earlier
+choice of ShabadSwar.com (which Ustaad ji's son had confirmed — let him know),
+mainly for spelling/memorability ("swar" vs svar/sur) and because "notes" is the
+everyday word students search. shabadswar.com was never bought.
+The old `gurbani-shabad-search.pages.dev` address still serves the site; every
+page carries a canonical link to shabadnotes.com.
 
 ## People
 
@@ -72,6 +77,13 @@ ShabadSargam, GurbaniSargam.
 - Performance/a11y pass: lean search index shipped via `fetch()` on both
   homepage and browse page (was blocking first paint), Tone.js deferred,
   detail-page layout-shift fixes, favicon fix, accessibility/SEO sweep
+- 2026-11-01: 20 more shabads published from Daljot's notation doc + Gaund/
+  Dhanasari xlsx (28 notated total). Published as-is with known open items:
+  "or" alternatives in JL4/MKT/UKQ, suspected typos in QSM/ET9/MFC, not yet
+  reviewed by Baljeet/Ustaad ji. Held back: Chilmil, Murda Hoye Murid (incomplete).
+- 2026-11-01: `notatedAt` now parsed day-first (sheet locale), fixing the
+  "recently notated" order; raag notes no longer leak developer comments;
+  unique per-shabad page titles; notation shown before text on mobile
 - Fixed: concurrency race condition in the base-text crawl (~800 shabads had
   out-of-order lines) — see `crawl-ordering-fix-2026-07-06.md`
 
@@ -98,12 +110,22 @@ on shabad pages now, gated only on review:
 - **Needs a rebase before merging** — its last commit is 2026-07-08; `main`
   has since moved 1 commit ahead (next/previous shabad navigation)
 
+## Resolved / recent
+
+- **Ma swar convention — SETTLED (shuddha-set):** `M` = shuddh madhyam, `m` = teevra.
+  Uniform rule: uppercase = shuddh, lowercase = altered (`r g d n` komal, `m` teevra).
+  Notation scripts reduced to **Roman + Gurmukhi** (Bhatkhande dropped). `SARGAM.md` (dataset
+  copy) already updated. **Pending on `feat-sargam-notation`:** flip `m`/`M` in `sargam.js`,
+  drop Bhatkhande in `NotationView.astro`, sync the branch's `SARGAM.md`, and **audit +
+  migrate any already-encoded ma notation** (e.g. `legacy-notation.mjs`) — old convention had
+  `m`=shuddh, so meaning inverts if not migrated.
+- **Ustaad ji's notation PDFs received** (via Anmol) — extraction underway in the separate
+  `gurmat-sangeet-data` repo (see that repo's `CLAUDE.md`).
+
 ## Open decisions (need a human — do not guess)
 
-- **Ma swar convention:** m = shuddh vs. m = teevra — needs Ustaad ji's
-  ear-confirmation before encoding.
 - Other notation calls pending Ustaad ji's input.
-- Awaiting Ustaad ji's notation PDFs.
+- Dataset governance + licensing (proposed CC BY-NC 4.0) — pending Ustaad ji's family's blessing.
 
 ## On the horizon
 

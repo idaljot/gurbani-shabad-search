@@ -1,4 +1,4 @@
-// Raag reference data for Gurbani Kirtan Swar Notation, keyed by the exact
+// Raag reference data for Shabad Notes, keyed by the exact
 // `raag` string as it appears in src/data/shabads.json (the GurbaniNow API's
 // raag.english field — its transliteration scheme differs from common
 // spellings, e.g. "Raag Gauree" not "Gauri", "Siree Raag" not "Sri Raag").
