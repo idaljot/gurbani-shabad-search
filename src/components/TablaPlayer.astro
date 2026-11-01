@@ -137,6 +137,23 @@ const initialKey = parseKey(presetKey) || 'C';
         <label class="tabla-bell-toggle">
           <input type="checkbox" data-role="fs-bell-toggle" /> Bell on beat 1
         </label>
+        <div class="tabla-tanpura-row">
+          <button type="button" class="tabla-tanpura-btn" data-role="tanpura-toggle" aria-pressed="false">Tanpura</button>
+          <label>
+            Sa
+            <select class="tabla-select" data-role="tanpura-key" aria-label="Tanpura key (Sa)">
+              {KEY_NAMES.map((k) => <option value={k} selected={k === initialKey}>{k}</option>)}
+            </select>
+          </label>
+          <label>
+            1st string
+            <select class="tabla-select" data-role="tanpura-first" aria-label="Tanpura first string">
+              <option value="P" selected>Pa</option>
+              <option value="M">Ma</option>
+              <option value="N">Ni</option>
+            </select>
+          </label>
+        </div>
       </div>
     </div>
   </div>
@@ -464,6 +481,14 @@ const initialKey = parseKey(presetKey) || 'C';
   .tabla-fs-controls .tabla-bell-toggle {
     font-size: 0.9rem;
   }
+  .tabla-fs-controls .tabla-tanpura-row {
+    margin: 0;
+    font-size: 0.9rem;
+  }
+  .tabla-fs-controls .tabla-tanpura-btn {
+    font-size: 0.95rem;
+    padding: 0.4rem 1rem;
+  }
 </style>
 
 <script>
@@ -531,9 +556,13 @@ const initialKey = parseKey(presetKey) || 'C';
 
   function triggerBell(time) {
     if (!bellBuffer) return;
+    // The recording rings for ~6 s at full level, which drowns the theka;
+    // play it softer and cut it after ~1 s with a short fade.
     const player = new window.Tone.Player(bellBuffer).toDestination();
+    player.volume.value = -10;
+    player.fadeOut = 0.35;
     player.onstop = () => player.dispose();
-    player.start(time);
+    player.start(time, 0, 1.1);
   }
 
   function getSynth(bol) {
@@ -621,20 +650,20 @@ const initialKey = parseKey(presetKey) || 'C';
       tanpuraSynth.releaseAll();
     }
     instances.forEach((inst) => {
-      if (inst.tanpuraBtn) inst.tanpuraBtn.setAttribute('aria-pressed', String(tanpuraOn));
+      inst.tanpuraBtns.forEach((btn) => btn.setAttribute('aria-pressed', String(tanpuraOn)));
     });
   }
 
   function setTanpuraKey(key) {
     if (!(key in NOTE_INDEX)) return;
     tanpuraKey = key;
-    instances.forEach((inst) => { if (inst.tanpuraKeySelect) inst.tanpuraKeySelect.value = key; });
+    instances.forEach((inst) => inst.tanpuraKeySelects.forEach((sel) => { sel.value = key; }));
   }
 
   function setTanpuraFirst(first) {
     if (!(first in FIRST_STRING_OFFSET)) return;
     tanpuraFirst = first;
-    instances.forEach((inst) => { if (inst.tanpuraFirstSelect) inst.tanpuraFirstSelect.value = first; });
+    instances.forEach((inst) => inst.tanpuraFirstSelects.forEach((sel) => { sel.value = first; }));
   }
 
   function renderBeats(beatsEl, taalName) {
@@ -837,9 +866,10 @@ const initialKey = parseKey(presetKey) || 'C';
       fsTempoValue: el.querySelector('[data-role="fs-tempo-value"]'),
       bellToggle: el.querySelector('[data-role="bell-toggle"]'),
       fsBellToggle: el.querySelector('[data-role="fs-bell-toggle"]'),
-      tanpuraBtn: el.querySelector('[data-role="tanpura-toggle"]'),
-      tanpuraKeySelect: el.querySelector('[data-role="tanpura-key"]'),
-      tanpuraFirstSelect: el.querySelector('[data-role="tanpura-first"]'),
+      // Tanpura controls appear twice per player (main row + fullscreen).
+      tanpuraBtns: el.querySelectorAll('[data-role="tanpura-toggle"]'),
+      tanpuraKeySelects: el.querySelectorAll('[data-role="tanpura-key"]'),
+      tanpuraFirstSelects: el.querySelectorAll('[data-role="tanpura-first"]'),
     };
     instances.push(inst);
     inst.playBtn.addEventListener('click', togglePlay);
@@ -853,9 +883,9 @@ const initialKey = parseKey(presetKey) || 'C';
     if (inst.fsTempoRange) inst.fsTempoRange.addEventListener('input', (e) => setTempo(Number(e.target.value)));
     if (inst.bellToggle) inst.bellToggle.addEventListener('change', (e) => setBellEnabled(e.target.checked));
     if (inst.fsBellToggle) inst.fsBellToggle.addEventListener('change', (e) => setBellEnabled(e.target.checked));
-    if (inst.tanpuraBtn) inst.tanpuraBtn.addEventListener('click', toggleTanpura);
-    if (inst.tanpuraKeySelect) inst.tanpuraKeySelect.addEventListener('change', (e) => setTanpuraKey(e.target.value));
-    if (inst.tanpuraFirstSelect) inst.tanpuraFirstSelect.addEventListener('change', (e) => setTanpuraFirst(e.target.value));
+    inst.tanpuraBtns.forEach((btn) => btn.addEventListener('click', toggleTanpura));
+    inst.tanpuraKeySelects.forEach((sel) => sel.addEventListener('change', (e) => setTanpuraKey(e.target.value)));
+    inst.tanpuraFirstSelects.forEach((sel) => sel.addEventListener('change', (e) => setTanpuraFirst(e.target.value)));
   });
 
   const presetEl = document.querySelector('[data-tabla-player][data-preset-taal]');
