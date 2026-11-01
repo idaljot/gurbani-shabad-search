@@ -103,7 +103,10 @@ export const RAAGS = {
     komal: [], teevra: [], varjit: [], tukda: '',
     time: 'First quarter of night, 6pm-9pm (some sources: 3pm-6pm)',
     mood: 'Contemplative; serious, thoughtful and composed. Principles and seriousness.',
-    notes: 'Has the largest number of compositions in SGGS. Contains Sukhmani Sahib and Bavan Akhri. Data does not distinguish Gauri sub-raags (Guareri, Bairagan, Cheti) — this entry, and its playlist, cover the plain Gauri only; see the file header comment for the sub-raag seed content (varjit/komal/teevra/aroh/avroh from class notes) that has nowhere to attach.',
+    // Data does not distinguish Gauri sub-raags (Guareri, Bairagan, Cheti) —
+    // this entry, and its playlist, cover the plain Gauri only; see the file
+    // header comment for the sub-raag seed content that has nowhere to attach.
+    notes: "Has the largest number of compositions in SGGS. Contains Sukhmani Sahib and Bavan Akhri. Sub-raags (Guareri, Bairagan, Cheti) aren't listed separately here.",
     youtubePlaylist: 'https://www.youtube.com/playlist?list=PLQSK-tQ7aj4XeLBdayRmcgLZyZgNmZexv',
     sourceNote: 'Compiled from public sources',
   },
@@ -213,7 +216,9 @@ export const RAAGS = {
     komal: [], teevra: [], varjit: [], tukda: '',
     time: 'Evening',
     mood: 'A raag with Muslim/Persian influence; longing and beauty.',
-    notes: 'Data does not distinguish a separate Tilang Kaafi; this playlist (originally labelled Tilang Kaafi) is the only Tilang-related one available.',
+    // Data does not distinguish a separate Tilang Kaafi; this playlist
+    // (originally labelled Tilang Kaafi) is the only Tilang-related one available.
+    notes: "Tilang Kaafi isn't listed separately here.",
     youtubePlaylist: 'https://www.youtube.com/playlist?list=PLQSK-tQ7aj4XxP1wIfstzOTFWrN3Ym9E6',
     sourceNote: 'Compiled from public sources',
   },
@@ -263,7 +268,10 @@ export const RAAGS = {
     komal: [], teevra: [], varjit: [], tukda: '',
     time: 'Second quarter of night, 9pm-12am',
     mood: 'Very melodious; an effective night raag.',
-    notes: 'Nat and Nat Narayan appear as distinct, independent forms in SGGS. A separate "Nat" mood/playlist exists in the seed data but has no matching key in shabads.json (no bare "Raag Nat" appears in the crawl) — see the file header comment for its content rather than attaching it here.',
+    // A separate "Nat" mood/playlist exists in the seed data but has no
+    // matching key in shabads.json (no bare "Raag Nat" appears in the crawl) —
+    // see the file header comment for its content rather than attaching it here.
+    notes: 'Nat and Nat Narayan appear as distinct, independent forms in SGGS.',
     youtubePlaylist: 'https://www.youtube.com/playlist?list=PLQSK-tQ7aj4Viv8XT_LYRLU_qgU--A_kM',
     sourceNote: 'Compiled from public sources',
   },
@@ -323,7 +331,9 @@ export const RAAGS = {
     komal: [], teevra: [], varjit: [], tukda: '',
     time: 'Spring season (seasonal - not time-bound)',
     mood: 'The joy of spring; renewal, celebration and hope.',
-    notes: 'Data does not distinguish a separate Basant Hindol; this is the plain Basant playlist.',
+    // Data does not distinguish a separate Basant Hindol; this is the plain
+    // Basant playlist.
+    notes: "Basant Hindol isn't listed separately here.",
     youtubePlaylist: 'https://www.youtube.com/playlist?list=PLQSK-tQ7aj4VoPD_ug-5YfxwSnh_3SrLY',
     sourceNote: 'Compiled from public sources',
   },

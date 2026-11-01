@@ -48,8 +48,15 @@ const hasMusicalInfo = Boolean(
 );
 const hasPlaylist = Boolean(raagInfo && raagInfo.youtubePlaylist);
 const showRaagSection = hasMusicalInfo || hasPlaylist;
+
+// Tab/search title: the shabad's own line (minus trailing ॥੧॥ ਰਹਾਉ ॥-style
+// markers), so hundreds of pages in the same raag don't share one title.
+const titleLine = (shabad.previewLine || shabad.firstLine || '')
+  .replace(/[\s॥।੦-੯]*(ਰਹਾਉ[\s॥।੦-੯]*)?$/u, '')
+  .trim();
+const pageTitle = [titleLine, shabad.raag, 'Gurbani Kirtan Swar Notation'].filter(Boolean).join(' · ');
 ---
-<Layout title={`${shabad.raag} · ${shabad.writer}`}>
+<Layout title={pageTitle}>
   <div class="top-row">
     <p class="back"><a href="/">&larr; Back to search</a></p>
     <nav class="shabad-nav compact" aria-label="Adjacent shabads">
@@ -222,6 +229,9 @@ const showRaagSection = hasMusicalInfo || hasPlaylist;
     .panels.one { grid-template-columns: 1fr; }
     @media (max-width: 700px) {
       .panels.two { grid-template-columns: 1fr; }
+      /* Stacked on a phone, notation first — otherwise you scroll past the
+         whole shabad text before reaching the sthayi. */
+      .panels.two .notation-panel { order: -1; }
     }
 
     section h2 {
